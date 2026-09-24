@@ -1,0 +1,269 @@
+**Takeaway.** Self-reference can shift a model–human comparison in the model's favor. The shift is directly estimable, but a positive shift does not establish that the model wins, that the ranking reverses, or that the alternative reference is correct.
+
+### General setup: separate the competitor from the reference
+
+Let $X$ denote an item. Annotator $r$ produces a response $Y_r$, with conditional mean
+
+$$
+\mu_r(x)=\mathbb E[Y_r\mid X=x,r].
+$$
+
+A model trained on A's labels outputs $p_A(x)$. We compare this model with B's observed response, using another response as the reference.
+
+| Role | Symbol | What it represents |
+|---|---|---|
+| Training annotator | A | Supplies labels used to train the model |
+| Model | $p_A$ | A prediction rule fitted to A's responses |
+| Human competitor | B | The human response against which the model is compared |
+| External reference | C | A distinct annotator used to evaluate that comparison |
+| Latent target | $\mu^*$ | The target specified by the statistical model; not directly observed |
+
+For the bounded scalar formulation, write
+
+$$
+Y_r=\mu_r(X)+\varepsilon_r,\qquad
+\mu_r(X)=\mu^*(X)+b_r(X),\qquad
+\mathbb E[\varepsilon_r\mid X,r]=0.
+$$
+
+The population-centering assumption is $\mathbb E_r[b_r(x)]=0$ at each $x$. Here the expectation over $r$ refers to an idealized population of annotators. It does not say that every fixed panel averages exactly to $\mu^*$, or that each annotator's bias averages to zero over items. In this additive model, $\mu^*$ is the annotator-population mean response. Treating it as a clinical target would require further justification.
+
+Separate learning error from annotation bias by writing
+
+$$
+p_A=\mu_A+h_A=\mu^*+b_A+h_A.
+$$
+
+The term $b_A$ describes what is systematic about A's responses. The term $h_A$ describes how the fitted model differs from A's conditional mean. Learning A more accurately can reduce $h_A$ while preserving $b_A$.
+
+### A comparison gap and a self-reference effect
+
+Using reference J, define the squared-loss gap
+
+$$
+\Delta_J
+=\mathbb E\!\left[(p_A(X)-Y_J)^2-(Y_B-Y_J)^2\right].
+$$ {#eq-comparison-gap}
+
+A negative gap favors the model; a positive gap favors B. The evaluation metric is squared loss, not classification accuracy or AUC. A soft prediction and an observed human response are the two competitors.
+
+Self-reference uses J=A. External-reference evaluation uses J=C. Their difference is
+
+$$
+\begin{aligned}
+S_{A,C}
+&=\Delta_C-\Delta_A\\
+&=2\mathbb E\!\left[(Y_A-Y_C)(p_A(X)-Y_B)\right].
+\end{aligned}
+$$ {#eq-self-reference}
+
+If $S_{A,C}>0$, the gap is more favorable to the model when A is the reference. This definition measures a change in the comparison. It does not require $\Delta_A<0$ or a change of sign between $\Delta_A$ and $\Delta_C$.
+
+::: {.callout-note collapse="true" title="Why the identity holds"}
+
+For arbitrary real values $p,b,a,c$,
+
+$$
+[(p-c)^2-(b-c)^2]-[(p-a)^2-(b-a)^2]
+=2(a-c)(p-b).
+$$
+
+Taking expectations gives @eq-self-reference. The algebra does not depend on an additive bias model or on whether the responses are binary. The model assumptions enter when interpreting the effect and quantifying its uncertainty.
+
+:::
+
+### Why the effect can appear even when learning works
+
+On evaluation items held out from fitting, assume the idiosyncratic responses of distinct annotators are independent conditional on the item and annotator identities. Then
+
+$$
+\frac{S_{A,C}}{2}
+=\mathbb E_X[(\mu_A-\mu_C)(\mu_A-\mu_B+h_A)].
+$$
+
+In the additive formulation this becomes
+
+$$
+\begin{aligned}
+\frac{S_{A,C}}{2}
+={}&\mathbb E_X[b_A^2]
+-\mathbb E_X[b_A b_B]\\
+&-\mathbb E_X[b_C(b_A-b_B)]
++\mathbb E_X[(b_A-b_C)h_A].
+\end{aligned}
+$$ {#eq-bias-decomposition}
+
+The first term captures alignment with A's own systematic tendencies. The next two depend on how the particular annotators agree or differ. The last reflects imperfect learning. This is why self-reference has a systematic mechanism without having the same sign for every fixed trio.
+
+The population-learning ideal makes the mechanism especially clear. If A, B, and C are independent draws from the annotator population and $p_A=\mu_A$, then
+
+$$
+\mathbb E_{A,B,C}[S_{A,C}]
+=2\mathbb E_X\operatorname{Var}_r\{\mu_r(X)\}\geq0.
+$$ {#eq-average-self-reference}
+
+The expected shift is strictly positive whenever annotators' conditional response tendencies differ on a set of items with positive probability. In the additive centered model, this variance is $\mathbb E_r[b_r(X)^2]$.
+
+More training data can make a model a better predictor of A without making A an independent judge of that model's performance. At the same time, @eq-average-self-reference is a statement over sampled annotators. It does not predict that all six permutations of one realized three-person panel must show a positive effect.
+
+::: {.callout-note collapse="true" title="What training learns, and what remains when the fit is imperfect"}
+
+For squared-loss training on A,
+
+$$
+\mathbb E[(g(X)-Y_A)^2]
+=\mathbb E[(g(X)-\mu_A(X))^2]
++\mathbb E[\operatorname{Var}(Y_A\mid X,A)].
+$$
+
+The unrestricted population minimizer is $\mu_A$. With a restricted model class, $h_A$ includes approximation and estimation error, as well as any optimization error of the fitted model.
+
+For iid bounded training observations and exact empirical risk minimization over $\mathcal F\subseteq[0,1]$, the source notes give a bound of the form
+
+$$
+\|h_A\|_2^2\leq
+\inf_{g\in\mathcal F}\|g-\mu_A\|_2^2
++8\mathfrak R_n(\mathcal F)
++2\sqrt{\frac{\log(2/\delta)}{2n}}
+$$
+
+with probability at least $1-\delta$. Here $\mathfrak R_n$ is the expected Rademacher complexity of the prediction class. This explains the roles of approximation and sample size; it is not a claim that neural-network optimization necessarily achieves exact ERM.
+
+A useful statement that also covers binary responses sets $m(x)=\mathbb E_r\mu_r(x)$. Provided the fit on A does not use B or C,
+
+$$
+\begin{aligned}
+\mathbb E[S_{A,C}]
+={}&2\mathbb E_X\operatorname{Var}_r\{\mu_r(X)\}\\
+&+2\mathbb E_{A,\mathrm{train}}\mathbb E_X[(\mu_A-m)h_A].
+\end{aligned}
+$$
+
+The absolute value of the second term is at most
+
+$$
+2\mathbb E_{A,\mathrm{train}}
+[\|\mu_A-m\|_2\,\|h_A\|_2].
+$$
+
+Accurate learning makes this remainder small; it does not remove the leading between-annotator variation.
+
+:::
+
+### Detecting the effect from paired evaluation items
+
+For each of $n$ evaluation items, form the paired contribution
+
+$$
+Z_i=2(Y_{A,i}-Y_{C,i})(p_A(X_i)-Y_{B,i}).
+$$
+
+Estimate $S_{A,C}$ by $\widehat S=n^{-1}\sum_iZ_i$ and its standard error by $s_Z/\sqrt n$. The one-sided test of $H_0:S_{A,C}\leq0$ rejects when
+
+$$
+\widehat S-t_{n-1,1-\alpha}\frac{s_Z}{\sqrt n}>0.
+$$ {#eq-task1-test}
+
+The unit of replication is the item. All responses on one item remain paired. With iid held-out evaluation items and nonzero finite variance, this is an asymptotic test; the Student-t cutoff does not make it an exact finite-sample test for arbitrary bounded responses.
+
+### Bernoulli setup: the same question, a different response model
+
+For a binary aspect $h$, retain the individual label:
+
+$$
+Y_{r,h}\mid X,r\sim\operatorname{Bernoulli}(\mu_{r,h}(X)),
+\qquad
+\operatorname{logit}\mu_{r,h}
+=\operatorname{logit}\mu_h^*+b_{r,h}.
+$$
+
+This models systematic differences on the logit scale. Even if $\mathbb E_r b_{r,h}(x)=0$, the mean probability $\mathbb E_r\mu_{r,h}(x)$ need not equal $\mu_h^*(x)$. We will need that distinction in Part III.
+
+For Task I, however, the Brier-loss identity remains exactly the same:
+
+$$
+S_{A,C,h}
+=2\mathbb E[(Y_{A,h}-Y_{C,h})(p_{A,h}(X)-Y_{B,h})].
+$$
+
+An unweighted binary-cross-entropy model targets the annotator's conditional probability $\mu_{A,h}$ at the unrestricted population optimum. Its probability output can still be evaluated with Brier loss. Training loss and evaluation loss do not need to be identical.
+
+The ideal average self-reference effect in @eq-average-self-reference still applies, now using between-annotator variance **on the probability scale**. It is not twice the variance of the logit biases.
+
+If we summarize 27 aspects, we average their $Z_{i,h}$ values within each image and then compute uncertainty across images. We do not treat the 27 labels of one image as 27 independent observations. Aspect-specific tests are useful descriptively, but simultaneous claims across aspects and trios require an explicit multiple-testing rule.
+
+### Real-data setting: two views of the same annotations
+
+We use annotator-specific labels from VinDr-CXR [@nguyen2022vindr; @vindr2021data], accessed through PhysioNet [@pollard2026physionet]. The released resource contains 18,000 radiographs. Its official training set has three independent radiologist annotations per image; its official test set uses five-reader consensus. Our experiments use filtered annotator cohorts and project-specific splits. Their held-out sets should not be confused with the resource's official consensus test set.
+
+The project represents each image with a precomputed 1,376-dimensional embedding. When an embedding contains multiple spatial or instance vectors, those vectors are averaged. The processed labels contain 27 clinical finding or diagnosis indicators, excluding "No finding." We analyze them in two ways:
+
+| Experiment | Response representation | Model output | Training objective |
+|---|---|---|---|
+| Scalar Task I | Mean of the 27 binary indicators | One sigmoid output | Mean squared error |
+| Bernoulli Task I | All 27 indicators separately | 27 sigmoid probabilities | Unweighted binary cross-entropy |
+
+The scalar response is
+
+$$
+Y_r^{\mathrm{avg}}=\frac1{27}\sum_{h=1}^{27}Y_{r,h}.
+$$
+
+It is a bounded score with 28 possible values, not a continuously distributed clinical measurement or a disease-severity scale. It can summarize how broadly an annotator marks findings, but it removes information about which findings were marked. Squared loss on this average is also different from averaging 27 aspect-specific Brier losses.
+
+Both Task I workflows use R8, R9, and R10, with annotator-specific training and validation data and the same paired evaluation images. The evaluation table has 4,500 annotation rows, corresponding to **1,500 images with three annotations each**. The paired test therefore uses 1,500 image-level observations.
+
+::: {.callout-note collapse="true" title="Training splits and label construction"}
+
+| Annotator | Training rows | Mean scalar label, training | Validation rows | Mean scalar label, validation |
+|---|---:|---:|---:|---:|
+| R8 | 4,446 | 0.0698 | 636 | 0.0643 |
+| R9 | 4,046 | 0.0953 | 579 | 0.0955 |
+| R10 | 4,346 | 0.0774 | 621 | 0.0795 |
+
+The mean scalar label across the 4,500 evaluation rows is 0.0957. These prevalence summaries describe the processed splits; they do not by themselves identify an annotator effect because the training item distributions can differ.
+
+Both networks use the precomputed embedding, two hidden layers, and the appropriate one- or 27-dimensional output. The binary workflow has no positive-class weighting, aspect weighting, or additional "No finding" head or constraint. The binary data preparation preserves the original Task I split rather than introducing a new random split.
+
+The processed aspects are: Aortic enlargement; Atelectasis; Calcification; Cardiomegaly; Clavicle fracture; Consolidation; Edema; Emphysema; Enlarged PA; ILD; Infiltration; Lung Opacity; Lung cavity; Lung cyst; Mediastinal shift; Nodule/Mass; Pleural effusion; Pleural thickening; Pneumothorax; Pulmonary fibrosis; Rib fracture; Other lesion; COPD; Lung tumor; Pneumonia; Tuberculosis; Other diseases.
+
+:::
+
+### Scalar result: a positive effect in four of six comparisons
+
+We evaluate all six ordered assignments of A, B, and C from R8, R9, and R10. Four reject $S_{A,C}\leq0$ at every reported nominal level: 0.001, 0.01, 0.05, and 0.10. These are the two configurations with R8 as the training annotator and the two with R9. The two configurations with R10 as the training annotator have negative estimated effects and do not reject.
+
+| Training annotator A | Competitor B | External reference C | Reported self-reference result |
+|---|---|---|---|
+| R8 | R9 | R10 | Positive; rejects at all four reported levels |
+| R8 | R10 | R9 | Positive; rejects at all four reported levels |
+| R9 | R8 | R10 | Positive; rejects at all four reported levels |
+| R9 | R10 | R8 | Positive; rejects at all four reported levels |
+| R10 | R8 | R9 | Negative estimate; does not reject |
+| R10 | R9 | R8 | Negative estimate; does not reject |
+
+::: {.result-placeholder}
+Figure awaiting imported result file (`part1-scalar-effects`).
+:::
+
+**Figure caption.** Estimated self-reference effects for the six ordered Task I configurations. Positive values mean that using the training annotator as reference moves the model–human squared-loss comparison in the model's favor. Estimates and any displayed uncertainty bounds are computed over 1,500 paired images. The configurations reuse the same annotator panel and evaluation images.
+
+These results support a self-reference effect in the four identified configurations. The R10 cases also matter: the sign can differ across fixed trios, as the decomposition predicts. The six tests are dependent comparisons, not six independent samples from an annotator population. Their rejection count should not be interpreted as the population frequency of annotation bias.
+
+A positive $\widehat S$ alone does not show that the model was ranked above B under A and below B under C. That stronger statement requires inspecting the signs of both comparison gaps. The supplied summary does not establish how many ranking reversals occurred, so we do not report such a count.
+
+### Real Bernoulli Task I: completed protocol, results pending
+
+The binary experiment repeats the self-reference analysis on each of the 27 aspects, using the same R8–R10 splits and 1,500 paired evaluation images. It reports both aspect-specific effects and an image-level mean across all 27 aspects. This asks whether the scalar result conceals differences between individual labels.
+
+The workflow includes a validation-set temperature-scaling step, with planned BCE, Brier-score, and calibration-error diagnostics before and after scaling. Its calibration outputs are not yet documented as completed in the supplied record. Temperature scaling rescales logits to improve probability calibration [@guo2017calibration]. It does not remove annotator-specific tendencies by definition. The self-reference analysis must identify whether it uses raw or temperature-scaled probabilities; these are different fitted predictors.
+
+::: {.result-placeholder}
+Results pending: real Bernoulli Task I self-reference analysis (`part1-real-bernoulli-results`).
+:::
+
+**Draft status.** Final real-data Bernoulli Task I self-reference results are not yet available in the current experiment record. No per-aspect rejection counts, aggregate effects, or conclusions from this run are reported here.
+
+### What this part establishes
+
+Task I separates a testable reference effect from a claim about truth. It can show that the choice of evaluator changes a model's apparent advantage. It cannot, on its own, tell us which evaluator preserves the comparison we would obtain against the latent target. That is the question for Task II.

@@ -1,0 +1,245 @@
+**Takeaway.** Under a logit-bias model, averaging references reduces random variation but can leave a systematic probability-scale shift. A Bernoulli certificate must allow for both effects.
+
+### Why the additive argument does not transfer unchanged
+
+For one binary aspect, suppress the aspect index and write
+
+$$
+Y_r\mid X,r\sim\operatorname{Bernoulli}(\mu_r(X)),
+\qquad
+\mu_r(X)=\sigma(\operatorname{logit}\mu^*(X)+b_r(X)),
+$$ {#eq-bernoulli-model}
+
+where $\sigma(u)=(1+e^{-u})^{-1}$. Assume the bias is centered over annotators at each item: $\mathbb E_r b_r(x)=0$.
+
+Because the sigmoid is nonlinear,
+
+$$
+\mathbb E_r\sigma(\operatorname{logit}\mu^*(x)+b_r(x))
+\quad\text{need not equal}\quad\mu^*(x).
+$$
+
+An arbitrarily large probability-averaging panel can therefore converge to a value different from the latent target. In this model, $\operatorname{logit}\mu^*(x)$ is the population-average logit; this is a different centering convention from the additive model in Part II.
+
+The observed loss gap, the distortion identity, and the signal bound $L_\Delta$ remain the same. What changes is the bound for reference distortion.
+
+### Separate average logit offsets from item-dependent variation
+
+The reference identities, including their entire bias functions $b_r(\cdot)$, are iid draws independent of A, B, and the fit of $p_A$. The reference-panel analysis conditions on $p_A$ and B. Independent average offsets alone would not be enough: shared item-dependent bias components could still make the reference effects dependent.
+
+Let
+
+$$
+C_r=\mathbb E_X b_r(X),\qquad C_r\overset{\mathrm{iid}}\sim N(0,\tau^2).
+$$
+
+Allow bias to vary across items, but bound its average variation by
+
+$$
+\mathbb E_r\operatorname{Var}_X(b_r(X))
+\leq(\kappa-1)\tau^2,\qquad\kappa\geq1.
+$$ {#eq-kappa-assumption}
+
+Thus $\mathbb E_X\mathbb E_r b_r(X)^2\leq\kappa\tau^2$. The parameter $\tau$ measures between-annotator average logit offsets; $\kappa$ limits additional item-dependent variation. The Gaussian law is now imposed on unbounded logit offsets, not on bounded probability-scale distortion terms.
+
+For trained references, write $\widehat\mu_r=\mu_r+h_r$ on the **probability scale**. Under the error moment in @eq-reference-orthogonality, the aggregate surrogate-error contribution vanishes, and the relevant reference effects are
+
+$$
+g_r=\mathbb E_X[(\mu_r(X)-\mu^*(X))(p_A(X)-\mu_B(X))],
+\qquad
+g_{\widehat{\mathcal R}}=\frac1K\sum_r g_r.
+$$
+
+The logit model alone does not establish the surrogate-error assumption. A low prediction loss is useful evidence about a model but is not a proof of that particular moment condition.
+
+### The Bernoulli distortion bound
+
+Let $U_\tau$ be an upper confidence bound for $\tau$ and put $\ell=\log(2/\alpha_g)$. The bound used here is
+
+$$
+\begin{aligned}
+B_{\mathcal R}^{\mathrm{Bern}}
+=\min\Bigg\{1,\;&
+\frac{\sqrt3}{36}\kappa U_\tau^2\\
+&+\sqrt{\frac{\min\{\kappa U_\tau^2,4\}\,\ell}{8K}}
++\frac{\ell}{3K}\Bigg\}.
+\end{aligned}
+$$ {#eq-bernoulli-bound}
+
+The rule remains $L_\Delta>2B_{\mathcal R}^{\mathrm{Bern}}$.
+
+Each term has a distinct role. The first allows for the average shift caused by sigmoid curvature. The square-root term allows for random variation across a finite panel. The final term is the additional bounded-tail correction. The outer minimum uses the trivial bound $|g_{\widehat{\mathcal R}}|\leq1$.
+
+Increasing K reduces the two finite-panel terms. It does not eliminate the curvature term. This is why "use more annotators" is incomplete advice under the logit formulation. The rule can also be conservative: it must accommodate variation and nonlinear distortion without directly observing the target.
+
+::: {.callout-note collapse="true" title="Where the constants come from"}
+
+The logistic function satisfies
+
+$$
+\sup_u|\sigma'(u)|=\frac14,
+\qquad
+\sup_u|\sigma''(u)|=\frac{\sqrt3}{18}.
+$$
+
+A second-order expansion, together with pointwise centering of $b_r$, bounds the mean reference effect:
+
+$$
+|\mathbb E_r g_r|\leq\frac{\sqrt3}{36}\kappa\tau^2.
+$$
+
+The Lipschitz bound and Jensen's inequality give
+
+$$
+\operatorname{Var}_r(g_r)
+\leq\min\left\{\frac{\kappa\tau^2}{16},\frac14\right\}.
+$$
+
+The second bound uses the fact that the support of $g_r$ has diameter at most one. Consequently $|g_r-\mathbb E_rg_r|\leq1$. A bounded-summand Bernstein/sub-gamma bound controls the deviation of the K-reference average by
+
+$$
+\sqrt{\frac{\min\{\kappa\tau^2,4\}\ell}{8K}}
++\frac{\ell}{3K}
+$$
+
+with failure probability at most $\alpha_g$. On the separate event $\tau\leq U_\tau$, every term is bounded by the corresponding expression in @eq-bernoulli-bound. Combining those events with the main comparison coverage gives the same marginal false-certification statement as @eq-false-certificate, under the Bernoulli assumptions.
+
+This argument uses an intersection of events and a union bound. It does not assert that the reference-tail event has unchanged probability conditional on the scale estimate passing its own check.
+
+:::
+
+### Calibrating a logit-bias scale
+
+Under @eq-bernoulli-model, the latent logit cancels in a pairwise difference:
+
+$$
+\operatorname{logit}\mu_r(X)-\operatorname{logit}\mu_1(X)
+=b_r(X)-b_1(X).
+$$
+
+Averaging over items targets $C_r-C_1$. On $D_2$, we therefore use signed differences of the trained reference logits,
+
+$$
+W_{i,r}=\operatorname{logit}\widehat\mu_r(X_i)
+-\operatorname{logit}\widehat\mu_1(X_i),
+\qquad r=2,\ldots,K.
+$$
+
+The same covariance structure $I+\mathbf1\mathbf1^\top$ and chi-square inversion in @eq-scale-calibration produce $U_\tau$. Unlike continuous weighted calibration, these contrasts are not multiplied by $p_A-Y_B$. Unlike temperature scaling, this step does not fit a scalar temperature to label prediction loss.
+
+The calibration needs accurate out-of-sample logit contrasts. Predictions must lie strictly between zero and one; the item covariance must be estimable; and the signed mean first-stage logit-contrast error must be negligible at the calibration uncertainty scale, or its uncertainty must be accounted for. Probability-scale accuracy alone does not guarantee this near probabilities zero or one. Clipping probabilities also changes the contrasts and must be handled consistently with the calibration assumptions.
+
+These are conditions of the statistical argument, not properties established merely by training a Bernoulli network.
+
+::: {.callout-note collapse="true" title="Numerical inversion"}
+
+With $\widehat\Omega/n_2$ as the contrast noise matrix and $M=I+\mathbf1\mathbf1^\top$, a generalized eigendecomposition yields eigenvectors $v_j$ and eigenvalues $\lambda_j$, normalized so that $v_j^\top Mv_k=\mathbf1\{j=k\}$. Let $a_j=v_j^\top\bar W$. Then
+
+$$
+Q(t)=\sum_j\frac{a_j^2}{\lambda_j+t^2}.
+$$
+
+The workflow solves a scalar monotone equation in $u=t^2$ at the lower chi-square quantile and sets $U_\tau=\sqrt u$. The scale is nonnegative; boundary and singular cases must follow explicit solver logic. This computational reduction does not replace the assumptions needed to interpret the resulting endpoint as an upper confidence bound.
+
+:::
+
+### Why a controlled binary experiment is useful
+
+The real-data cohorts provide few reference annotators, and many clinical aspects are rare. Those conditions can leave little information for a conservative binary procedure. To inspect its behavior with larger panels and balanced synthetic outcomes, we keep the real image embeddings but generate artificial annotator responses.
+
+This is a **semi-synthetic experiment**: the feature geometry comes from real images, while the latent probabilities, annotator effects, and binary labels are generated. The 27 output aspects are artificial. Even though storage columns reuse clinical label names, the synthetic outcomes should be read as Aspect 1 through Aspect 27, not as simulated clinical diagnoses.
+
+The experiment uses 5,438 image embeddings and 34 synthetic annotators, R01–R34. Two identities serve as A and B, leaving up to 32 reference annotators. The image split contains 2,887 training items, 738 validation/calibration items ($D_2$), and 1,813 main evaluation items ($D_1$). The master random seed is 42. Each annotator has a separately trained 27-output BCE predictor.
+
+### The generator: controlled bias with nonlinear item effects
+
+We obtain ten standardized principal-component coordinates $z(x)$ from the full fixed pool of embeddings. For each aspect, a normalized random linear direction gives a score $s_h(x)$. The latent and annotator probabilities are
+
+$$
+\mu_h^*(x)=\sigma(a_h+s_h(x)),
+$$
+
+$$
+\mu_{r,h}(x)
+=\sigma(a_h+s_h(x)+C_{r,h}
++f_{r,h}(x)-\mathbb E_X f_{r,h}(X)).
+$$ {#eq-synthetic-generator}
+
+The centered random network $f_{r,h}$ gives item-dependent variation. The independent offset $C_{r,h}\sim N(0,0.1^2)$ controls average logit bias. Network parameters are sampled once per annotator and aspect and then held fixed across images; an annotator therefore has a stable response function rather than fresh bias noise on every item.
+
+For each aspect, $a_h$ is chosen so that the **annotator-population mean positive rate**, averaged over the fixed image pool, is 0.5. This does not force each annotator, each item, or every finite label sample to have a positive rate of 0.5. It also does not define the latent target's prevalence to be exactly 0.5.
+
+For this generator, $\tau=0.1$ and $\kappa=2$ is a valid analytic population upper bound. The procedure uses this generator-derived $\kappa$ while estimating the scale through logit contrasts. We do not replace the population bound with a favorable finite-panel estimate.
+
+::: {.callout-note collapse="true" title="Exact generator settings and diagnostics"}
+
+The supplied generation note and workflow specify the following settings:
+
+| Component | Setting |
+|---|---|
+| Feature pool | 5,438 real 1,376-dimensional image embeddings |
+| PCA features | 10 coordinates; full-pool standardization with population variance convention (`ddof=0`) |
+| Aspect direction | Gaussian vector in 10 dimensions, normalized to unit length |
+| Random network | $f_{r,h}(z)=W_{2,rh}\tanh(W_{1,rh}z+b_{1,rh})$ |
+| Hidden width | 32 |
+| First-layer weights | Independent $N(0,1/10)$ entries; second parameter is variance |
+| Hidden biases | Independent $N(0,1)$ entries |
+| Output weights | Independent $N(0,0.1^2/32)$ entries |
+| Average offsets | Independent $C_{r,h}\sim N(0,0.1^2)$ |
+| Item-centering | Subtract the mean of $f_{r,h}$ over the full pool |
+| Labels | Conditionally independent Bernoulli draws given the generated probabilities |
+| Panel and seed | 34 annotators, 27 aspects, master seed 42 |
+
+Independent, mean-zero output weights and bounded hidden activations give $\mathbb E_r f_{r,h}(x)=0$ and $\mathbb E_r\operatorname{Var}_X f_{r,h}(X)\leq\tau^2$. Centering over items makes $\mathbb E_X b_{r,h}(X)=C_{r,h}$ exactly. Hence
+
+$$
+\mathbb E_r\mathbb E_X b_{r,h}(X)^2
+=\mathbb E_r C_{r,h}^2
++\mathbb E_r\operatorname{Var}_X f_{r,h}(X)
+\leq2\tau^2,
+$$
+
+which justifies $\kappa=2$.
+
+The recorded maximum error in solving the population positive-rate constraint is $4.32\times10^{-6}$. The finite-panel expected positive rate is 0.500315 and the realized label rate is 0.500210. The recorded mean latent probability is 0.499999; this is a diagnostic outcome, not the quantity constrained by the intercept equation. Empirical finite-panel bias ratios range from 1.2387 to 1.3108, with mean 1.2730; these diagnostics do not replace the analytic population bound.
+
+The distribution of X used for generator centering and oracle moments is uniform over the full fixed pool. PCA is also fitted on that pool. This is a fixed-pool simulation, not an evaluation of an inductively learned feature transformation on unseen images. The inherited disjoint $D_1$ and $D_2$ subsets are an experimental analogue of the item-sampling theory; they do not by themselves establish its iid assumptions.
+
+:::
+
+### Results: reference panel size and the certification threshold
+
+For each reported setting, the confirmed final analysis uses reference panel sizes $K\in\{16,24,32\}$ and `prob` $\in\{0.05,0.10,0.20\}$, with 120 random model–human–reference configurations sampled at each $(K,\text{prob})$ combination and the rule applied separately to 27 aspects. These configurations reuse the same generated annotator panel, trained models, and image pool; they are not 120 independently regenerated datasets. As in Part II, `prob` is the reported implementation setting; its mapping to the three theoretical error terms must be read from the run metadata or code before assigning it a total-error interpretation.
+
+The $K=16$ and $K=32$ configurations are drawn from the `task2_bernoulli_sept_K8_16_32_random120_alpha*` run directories; the $K=24$ configurations are drawn from the separate `task2_bernoulli_sept_K24_random120_alpha*` run directories. The two families of runs are combined only at the level of the final summary table and figures below, not re-fit as a single experiment.
+
+There are two useful but different summaries, unchanged from the pilot K=8/16/32 grid:
+
+- **Any-aspect certification fraction:** the fraction of the 120 configurations with at least one certified aspect.
+- **Aspect–configuration certification fraction:** the fraction of the $120\times27=3{,}240$ aspect-specific comparisons that are certified.
+
+::: {.result-placeholder}
+Results pending: final K = 16, 24, 32 certification summary (`part3-certification-by-k16-k24-k32`).
+:::
+
+**Draft status.** The confirmed final certification table and per-aspect heatmap for $K=16,24,32$ have not yet been copied into this project from `HT/synthetic_bernoulli_task2/outputs/default_seed42/final_visualizations/` (`task2_per_aspect_rejection_summary_K16_K24_K32_random120_probs.csv`, and the accompanying `.png`/`.pdf` heatmaps). No certification fractions, aspect–configuration counts, or mean margins for this K grid are reported here. Values previously reported for $K=8$ under an earlier pilot run directory are not reused, relabeled as $K=24$, or otherwise carried over into this table.
+
+### Empirical power (synthetic ground truth)
+
+Unlike the real-data experiments, this generator fixes the latent probabilities and the annotator bias distribution. That makes it possible to identify, for each sampled configuration and aspect, whether the reference truly preserves the comparison's direction relative to the latent target — that is, whether the alternative the certification rule is meant to detect actually holds. Restricted to those configurations, the **empirical power** of the procedure is the fraction of them for which the rule correctly certifies.
+
+This is a different quantity from the certification (rejection) fractions reported above and elsewhere in this article, which are computed over all sampled configurations regardless of whether the alternative holds. The continuous/scalar real-data experiment in Part II does not have a known latent target, so no comparable power analysis is computed there; its results remain reported as certification fractions only.
+
+::: {.result-placeholder}
+[[PENDING:SYNTHETIC_TASK2_POWER]]
+:::
+
+Empirical power results based on the known synthetic ground truth will be added here.
+
+### What the synthetic experiment does—and does not—validate
+
+The construction controls the latent probabilities, the average logit-bias distribution, and a population bound on item-dependent bias variation. This makes it possible to study how the implemented rule behaves when substantially more annotators are available.
+
+The reported results show a strong change in certification frequency with panel size under these settings. They do not, by themselves, estimate the probability of an incorrect certificate. Although the generator makes oracle quantities available in principle, the supplied result summary does not report oracle sign agreement, false-certification rates, or coverage. We therefore do not claim that those properties have been empirically verified.
+
+Nor does a controlled label generator guarantee that trained surrogates satisfy the required error moment or logit-contrast accuracy. The use of the validation split for calibration also needs to be interpreted together with any checkpoint-selection or probability-calibration steps that used that split. Those first-stage conditions remain distinct from the generator's known $\tau$ and $\kappa$.

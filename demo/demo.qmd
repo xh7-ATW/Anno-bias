@@ -1,0 +1,103 @@
+---
+title: "Why averaging reduces uncertainty"
+subtitle: "A short statistical note"
+author: "Xuhe"
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+    toc-location: right
+    html-math-method: mathjax
+    citation-location: margin
+    reference-location: margin
+bibliography: references.bib
+---
+
+## The question
+
+Averaging several observations often produces a more stable estimate.
+How much uncertainty does it remove?
+
+### Assumptions
+
+We work under a simple sampling model:
+
+- Observations $X_1,\ldots,X_n$ are independent and identically distributed
+- Each has mean $\mu$ and finite variance $\sigma^2$
+- No missing data or measurement error
+
+Their sample mean is
+
+$$
+\bar X_n = \frac{1}{n}\sum_{i=1}^n X_i.
+$$
+
+By the law of large numbers, $\bar X_n$ concentrates around $\mu$ as $n$
+grows [@lln_wiki].
+
+## A useful result
+
+The sample mean is unbiased, and its variance decreases with sample size —
+a standard result in point estimation theory [@casella2002]:
+
+$$
+\mathbb{E}[\bar X_n]=\mu,
+\qquad
+\operatorname{Var}(\bar X_n)=\frac{\sigma^2}{n}.
+$$ {#eq-variance}
+
+By @eq-variance, quadrupling the sample size halves the standard error.
+
+::: {.callout-note collapse="true"}
+## Proof — click to expand
+
+Independence makes the covariance terms vanish. Therefore,
+
+$$
+\begin{aligned}
+\operatorname{Var}(\bar X_n)
+&=\frac{1}{n^2}
+  \sum_{i=1}^n\sum_{j=1}^n
+  \operatorname{Cov}(X_i,X_j)\\
+&=\frac{1}{n^2}\sum_{i=1}^n\sigma^2
+=\frac{\sigma^2}{n}.
+\end{aligned}
+$$
+
+The expectation follows directly from linearity.
+:::
+
+## A numerical example
+
+For $\sigma=1$, the standard error is $1/\sqrt{n}$.
+
+| Sample size $n$ | Standard error |
+|---------------:|---------------:|
+| 25             | 0.20           |
+| 100            | 0.10           |
+| 400            | 0.05           |
+
+: Standard error at three sample sizes. {#tbl-example}
+
+@tbl-example illustrates the square-root rate: increasing sample size
+helps, but each additional observation gives a smaller improvement.
+
+## What changes with dependence?
+
+If observations are correlated, the covariance terms remain:
+
+$$
+\operatorname{Var}(\bar X_n)
+=
+\frac{\sigma^2}{n}
++
+\frac{2}{n^2}\sum_{i<j}\operatorname{Cov}(X_i,X_j).
+$$
+
+Positive correlations can therefore limit the benefit of averaging.
+
+#### A note on notation {.unnumbered .unlisted}
+
+Throughout, $\operatorname{Cov}(X_i,X_j)$ denotes the covariance between
+$X_i$ and $X_j$, and reduces to $\sigma^2$ when $i=j$.

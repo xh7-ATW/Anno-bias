@@ -1,0 +1,78 @@
+---
+title: "Who Judges the Model?"
+subtitle: "Annotation bias, self-reference, and reliable model–human comparisons"
+author: "Xuhe"
+bibliography: annotation-bias/references.bib
+format:
+  html:
+    toc: false
+    number-sections: false
+    html-math-method: mathjax
+    citation-location: margin
+    reference-location: margin
+    css: annotation-bias/annotation-bias.css
+---
+
+::: {.article-summary}
+A model can learn an annotator's systematic tendencies as well as the task. When that annotator also supplies the evaluation reference, the model's apparent advantage over another human can change. We study how to detect this self-reference effect and when an ensemble of annotator-specific models can certify a comparison despite reference distortion.
+:::
+
+## Introduction {#introduction}
+
+Human labels enter a model twice: first as a training signal, and later as the standard against which its predictions are judged. These roles are often discussed separately. Their interaction matters when annotators differ systematically.
+
+Some tasks are explicitly subjective. In hate-speech or emotion annotation, different judgments may reflect different interpretations rather than interchangeable mistakes. Annotation policy helps determine which judgments a system should reproduce [@rottger2022paradigms; @davani2022disagreements]. Human preferences also shape language-model training. InstructGPT, for example, uses human demonstrations and comparisons, while explicitly examining generalization to held-out labelers [@ouyang2022instruction]. In medical image interpretation, an underlying clinical condition may exist even when the available labels do not provide an uncontested reference for it. These settings differ, but they share an evaluation question: **whose judgments define success?**
+
+Consider a model trained on annotator A and compared with annotator B. If A also supplies the evaluation labels, close agreement with A is rewarded twice: it is what training encourages, and what evaluation measures. A model can therefore look relatively strong because it has learned A's systematic tendencies. Evaluating against a different annotator C may change that apparent advantage. But replacing A with C does not, by itself, establish that C is the right reference.
+
+Model–human comparisons make this issue concrete. CheXNet reported a higher average F1 score than its radiologist comparison group under its study protocol [@rajpurkar2017chexnet]. Such findings must be interpreted together with the reference and metric used. Our analysis does not re-evaluate CheXNet or attribute the mechanism below to that study; it asks what a reference-dependent comparison can establish in general.
+
+Here is a deliberately simple example. On one illustrative item, a model predicts 0.75, A reports 0.80, and B and C both report 0.20. Using squared loss gives:
+
+| Evaluation reference | Model loss | B's loss | Model loss minus B's loss |
+|---|---:|---:|---:|
+| A: 0.80 | 0.0025 | 0.3600 | −0.3575 |
+| C: 0.20 | 0.3025 | 0.0000 | +0.3025 |
+
+: Illustrative values, not experimental observations. {#tbl-illustrative-reference}
+
+The predictions did not change; the reference did. The negative gap favors the model under A, while the positive gap favors B under C. This example illustrates a possible reversal, not an observed experimental result and not evidence that either reference is correct.
+
+Previous work has shown that annotator-specific patterns can be learned: Geva et al. found that performance often deteriorated on examples produced by unseen annotators in text datasets [@geva2019annotator]. Multi-annotator models can represent disagreement explicitly [@davani2022disagreements]. Classical approaches instead estimate latent labels and observer errors under specified models [@dawid1979observer; @raykar2010crowds]. Our question is more specific: **does a particular evaluation reference preserve the direction of a particular model–human comparison?**
+
+The article proceeds in three parts. Part I measures how the comparison changes under self-reference, for both bounded scalar and binary labels. Part II develops a trained-reference procedure in an additive framework. Part III treats binary labels through a logit-bias model, where averaging more references cannot automatically remove every component of distortion. The aim is to make the assumptions behind a comparison visible, and to distinguish a detectable reference effect from a certified conclusion about a latent target.
+
+::::: {.panel-tabset #research-parts}
+
+## I · Self-reference {#part-1}
+
+{{< include annotation-bias/_part-1-self-reference.qmd >}}
+
+## II · Continuous {#part-2}
+
+{{< include annotation-bias/_part-2-continuous.qmd >}}
+
+## III · Bernoulli {#part-3}
+
+{{< include annotation-bias/_part-3-bernoulli.qmd >}}
+
+:::::
+
+## Conclusion {#conclusion}
+
+A model–human comparison is also a comparison of how the model and human relate to an evaluation reference. When the model learns one annotator's systematic tendencies, using that annotator as the reference can change its apparent advantage. Task I makes that shift measurable. In the real scalar experiment, four of six configurations show a significant positive self-reference effect, while the two configurations trained on R10 have negative estimated effects. The real-data Bernoulli Task I analysis remains pending.
+
+Task II asks a different question: can the reference preserve the direction of the comparison against a specified latent target? The central idea is to compare a lower bound on the strength of the observed gap with an upper bound on reference distortion. Trained annotator models make this approach usable with sparse labeling overlap, while introducing assumptions about their own errors. The continuous procedure is a Gaussian working-model analysis; its observed certification frequency should be read in that light.
+
+Binary labels reveal why averaging alone is not enough. Centering annotator biases on the logit scale need not center their probabilities. Larger panels reduce random fluctuations, but a curvature-related component remains in the bound. The semi-synthetic results show how additional references can nevertheless make the certification rule substantially less restrictive in the evaluated settings.
+
+The practical lesson is to specify the reference, the comparison target, and the uncertainty together. A detected self-reference effect is not a verdict about which annotator is correct. A certificate is a comparison-specific conclusion under explicit assumptions. Keeping those distinctions visible makes claims about model–human performance easier to interpret and harder to overstate.
+
+## References {.unnumbered}
+
+::: {#refs}
+:::
+
+```{=html}
+<script src="annotation-bias/article-tabs.js"></script>
+```
