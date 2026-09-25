@@ -1,20 +1,31 @@
 ---
 title: "Who Judges the Model?"
 subtitle: "Annotation bias, self-reference, and reliable model–human comparisons"
-author: "Xuhe"
-bibliography: annotation-bias/references.bib
+author:
+  - "Xuhe Zhang"
+  - "Ying Jin"
+bibliography: references.bib
+resources:
+  - article-tabs.js
+  - results.js
+  - data/
 format:
   html:
     toc: false
     number-sections: false
     html-math-method: mathjax
-    citation-location: margin
-    reference-location: margin
-    css: annotation-bias/annotation-bias.css
+    css: annotation-bias.css
 ---
 
+::: {.article-authors}
+Xuhe Zhang[^amcs-affil], Ying Jin[^wharton-affil]
+:::
+
+[^amcs-affil]: AMCS, UPenn
+[^wharton-affil]: Wharton, UPenn
+
 ::: {.article-summary}
-A model can learn an annotator's systematic tendencies as well as the task. When that annotator also supplies the evaluation reference, the model's apparent advantage over another human can change. We study how to detect this self-reference effect and when an ensemble of annotator-specific models can certify a comparison despite reference distortion.
+A model can study an annotator's systematic tendencies as well as the task. When that annotator also supplies the evaluation reference, the model's apparent advantage over another human can change. We study how to detect this self-reference effect and when an ensemble of annotator-specific models can certify a comparison despite reference distortion.
 :::
 
 ## Introduction {#introduction}
@@ -60,7 +71,7 @@ The article proceeds in three parts. Part I measures how the comparison changes 
 
 ## Conclusion {#conclusion}
 
-A model–human comparison is also a comparison of how the model and human relate to an evaluation reference. When the model learns one annotator's systematic tendencies, using that annotator as the reference can change its apparent advantage. Task I makes that shift measurable. In the real scalar experiment, four of six configurations show a significant positive self-reference effect, while the two configurations trained on R10 have negative estimated effects. The real-data Bernoulli Task I analysis remains pending.
+A model–human comparison is also a comparison of how the model and human relate to an evaluation reference. When the model learns one annotator's systematic tendencies, using that annotator as the reference can change its apparent advantage. Task I makes that shift measurable. In the real scalar experiment, four of six configurations show a significant positive self-reference effect, while the two configurations trained on R10 have negative estimated effects. For the 27 binary findings, the across-aspect average shift is positive in all six configurations and significant at nominal α = 0.05 in four, while the average loss gap stays negative under both references.
 
 Task II asks a different question: can the reference preserve the direction of the comparison against a specified latent target? The central idea is to compare a lower bound on the strength of the observed gap with an upper bound on reference distortion. Trained annotator models make this approach usable with sparse labeling overlap, while introducing assumptions about their own errors. The continuous procedure is a Gaussian working-model analysis; its observed certification frequency should be read in that light.
 
@@ -74,5 +85,7 @@ The practical lesson is to specify the reference, the comparison target, and the
 :::
 
 ```{=html}
-<script src="annotation-bias/article-tabs.js"></script>
+<script src="article-tabs.js"></script>
+<script src="data/results-data.js"></script>
+<script src="results.js"></script>
 ```

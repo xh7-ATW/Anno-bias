@@ -57,13 +57,7 @@ The logit model alone does not establish the surrogate-error assumption. A low p
 Let $U_\tau$ be an upper confidence bound for $\tau$ and put $\ell=\log(2/\alpha_g)$. The bound used here is
 
 $$
-\begin{aligned}
-B_{\mathcal R}^{\mathrm{Bern}}
-=\min\Bigg\{1,\;&
-\frac{\sqrt3}{36}\kappa U_\tau^2\\
-&+\sqrt{\frac{\min\{\kappa U_\tau^2,4\}\,\ell}{8K}}
-+\frac{\ell}{3K}\Bigg\}.
-\end{aligned}
+B_{\mathcal R}^{\mathrm{Bern}}=\min\Bigg\{1,\;\frac{\sqrt3}{36}\kappa U_\tau^2+\sqrt{\frac{\min\{\kappa U_\tau^2,4\}\,\ell}{8K}}+\frac{\ell}{3K}\Bigg\}.
 $$ {#eq-bernoulli-bound}
 
 The rule remains $L_\Delta>2B_{\mathcal R}^{\mathrm{Bern}}$.
@@ -149,7 +143,7 @@ The real-data cohorts provide few reference annotators, and many clinical aspect
 
 This is a **semi-synthetic experiment**: the feature geometry comes from real images, while the latent probabilities, annotator effects, and binary labels are generated. The 27 output aspects are artificial. Even though storage columns reuse clinical label names, the synthetic outcomes should be read as Aspect 1 through Aspect 27, not as simulated clinical diagnoses.
 
-The experiment uses 5,438 image embeddings and 34 synthetic annotators, R01–R34. Two identities serve as A and B, leaving up to 32 reference annotators. The image split contains 2,887 training items, 738 validation/calibration items ($D_2$), and 1,813 main evaluation items ($D_1$). The master random seed is 42. Each annotator has a separately trained 27-output BCE predictor.
+The experiment uses 34 synthetic annotators, R01–R34, and 27 aspects. Two identities serve as A and B, and the final analysis compares reference panels of K = 16, 24, and 32 annotators on 1,813 test images. Each annotator has a separately trained 27-output BCE predictor. The data split and generator settings are listed in the collapsed details below.
 
 ### The generator: controlled bias with nonlinear item effects
 
@@ -177,7 +171,8 @@ The supplied generation note and workflow specify the following settings:
 
 | Component | Setting |
 |---|---|
-| Feature pool | 5,438 real 1,376-dimensional image embeddings |
+| Feature pool | 5,438 unique real images with 1,376-dimensional embeddings |
+| Image split | 2,887 training, 738 validation/calibration ($D_2$), 1,813 test ($D_1$) |
 | PCA features | 10 coordinates; full-pool standardization with population variance convention (`ddof=0`) |
 | Aspect direction | Gaussian vector in 10 dimensions, normalized to unit length |
 | Random network | $f_{r,h}(z)=W_{2,rh}\tanh(W_{1,rh}z+b_{1,rh})$ |
@@ -209,32 +204,51 @@ The distribution of X used for generator centering and oracle moments is uniform
 
 ### Results: reference panel size and the certification threshold
 
-For each reported setting, the confirmed final analysis uses reference panel sizes $K\in\{16,24,32\}$ and `prob` $\in\{0.05,0.10,0.20\}$, with 120 random model–human–reference configurations sampled at each $(K,\text{prob})$ combination and the rule applied separately to 27 aspects. These configurations reuse the same generated annotator panel, trained models, and image pool; they are not 120 independently regenerated datasets. As in Part II, `prob` is the reported implementation setting; its mapping to the three theoretical error terms must be read from the run metadata or code before assigning it a total-error interpretation.
+In the synthetic Bernoulli experiment, the reported rejection percentages vary sharply with the number of references and the probability setting. At prob = 0.10, the average across 27 aspects is 0% with 16 references, 18.8% with 24, and 100% with 32. The intermediate panel size is especially revealing: with 24 references the average rises from 0.2% at prob = 0.05 to 91% at prob = 0.20. Use the controls below to see how this pattern varies by finding.
 
-The $K=16$ and $K=32$ configurations are drawn from the `task2_bernoulli_sept_K8_16_32_random120_alpha*` run directories; the $K=24$ configurations are drawn from the separate `task2_bernoulli_sept_K24_random120_alpha*` run directories. The two families of runs are combined only at the level of the final summary table and figures below, not re-fit as a single experiment.
+::: {#result-synthetic-bernoulli-task2 .ab-result}
 
-There are two useful but different summaries, unchanged from the pilot K=8/16/32 grid:
-
-- **Any-aspect certification fraction:** the fraction of the 120 configurations with at least one certified aspect.
-- **Aspect–configuration certification fraction:** the fraction of the $120\times27=3{,}240$ aspect-specific comparisons that are certified.
-
-::: {.result-placeholder}
-Results pending: final K = 16, 24, 32 certification summary (`part3-certification-by-k16-k24-k32`).
+::: {.ab-result-title}
+More references, more opportunities to certify
 :::
 
-**Draft status.** The confirmed final certification table and per-aspect heatmap for $K=16,24,32$ have not yet been copied into this project from `HT/synthetic_bernoulli_task2/outputs/default_seed42/final_visualizations/` (`task2_per_aspect_rejection_summary_K16_K24_K32_random120_probs.csv`, and the accompanying `.png`/`.pdf` heatmaps). No certification fractions, aspect–configuration counts, or mean margins for this K grid are reported here. Values previously reported for $K=8$ under an earlier pilot run directory are not reused, relabeled as $K=24$, or otherwise carried over into this table.
+::: {.ab-widget data-widget="synthetic-task2"}
 
-### Empirical power (synthetic ground truth)
+| Reference panel | Average rejection percentage at prob = .10 |
+|---|---:|
+| 16 references | 0% |
+| 24 references | 18.8% |
+| 32 references | 100% |
 
-Unlike the real-data experiments, this generator fixes the latent probabilities and the annotator bias distribution. That makes it possible to identify, for each sampled configuration and aspect, whether the reference truly preserves the comparison's direction relative to the latent target — that is, whether the alternative the certification rule is meant to detect actually holds. Restricted to those configurations, the **empirical power** of the procedure is the fraction of them for which the rule correctly certifies.
+Average rejection percentage across 27 aspects. Each aspect contributes 120 trial decisions per K and prob setting. Trial configurations are shared across aspects.
 
-This is a different quantity from the certification (rejection) fractions reported above and elsewhere in this article, which are computed over all sampled configurations regardless of whether the alternative holds. The continuous/scalar real-data experiment in Part II does not have a known latent target, so no comparable power analysis is computed there; its results remain reported as certification fractions only.
-
-::: {.result-placeholder}
-[[PENDING:SYNTHETIC_TASK2_POWER]]
 :::
+
+:::
+
+[Explore Lung Opacity](#result-synthetic-bernoulli-task2){.ab-instance-link data-target="synthetic-task2" data-aspect="Lung Opacity"}
+
+The across-aspect average also hides heterogeneity. For Lung Opacity at prob = 0.10, the rejection percentage is 0% with both 16 and 24 references, while it is 100% with 32. At prob = 0.20, the percentage with 24 references reaches 98.3% (118/120).
+
+Each panel size and prob setting summarizes 120 trial configurations. These configurations reuse the same generated annotator panel, trained models, and image pool; they are not 120 independently regenerated datasets. `prob` is the reported implementation setting. Unlike Part II, the supplied synthetic summary does not record how it is split across the three error terms, so we do not assign it a total-error interpretation.
+
+::: {.callout-note collapse="true" title="Compare all 27 aspects"}
+
+::: {.ab-widget data-widget="synthetic-all-aspects"}
+This table requires JavaScript. The full results are in the CSV below.
+:::
+
+[Download the synthetic rejection summary (CSV)](data/task2-bernoulli/final/rejection-summary-K16-K24-K32.csv) · [Generation metadata (JSON)](data/task2-bernoulli/generation-meta.json) · [Generation config (JSON)](data/task2-bernoulli/generation-config.json)
+
+:::
+
+### Empirical power
 
 Empirical power results based on the known synthetic ground truth will be added here.
+
+<!-- [[PENDING:SYNTHETIC_TASK2_POWER]] -->
+
+
 
 ### What the synthetic experiment does—and does not—validate
 

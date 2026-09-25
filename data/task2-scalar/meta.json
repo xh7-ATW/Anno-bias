@@ -1,0 +1,37 @@
+{
+  "alt_annotators": [
+    "R11",
+    "R12",
+    "R13",
+    "R14",
+    "R15",
+    "R16"
+  ],
+  "prob": [
+    0.01,
+    0.05,
+    0.1,
+    0.2
+  ],
+  "prob_mode": "split-total",
+  "component_level_interpretation": "alpha_delta=alpha_g=gamma=prob/3",
+  "K_values": [
+    2,
+    3,
+    4
+  ],
+  "reference_sampling": "exhaustive combinations from the four remaining R11-R16 annotators",
+  "summary_csv": "/projects/bgzf/xzhang65/annotation_bias/HT/v1_cts_avg_trained_ref/outputs/task_II_alt_modified/task2_alt_modified_exhaustive_summary.csv",
+  "aggregate_csv": "/projects/bgzf/xzhang65/annotation_bias/HT/v1_cts_avg_trained_ref/outputs/task_II_alt_modified/task2_alt_modified_true_rate_by_k_prob.csv",
+  "heatmap_png": "/projects/bgzf/xzhang65/annotation_bias/HT/v1_cts_avg_trained_ref/outputs/task_II_alt_modified/task2_alt_modified_true_rate_by_k_prob_heatmap.png",
+  "formula_version": "modified_tau_g",
+  "theory_pdf": "Anno_bias_theory_modified.pdf",
+  "test_sizes_by_B": {
+    "R11": 512,
+    "R12": 549,
+    "R13": 535,
+    "R14": 485,
+    "R15": 551,
+    "R16": 547
+  }
+}

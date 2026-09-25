@@ -211,24 +211,59 @@ For this experiment we use R11–R16, a six-annotator cohort selected to improve
 
 Each annotator-specific model predicts the same 27-indicator average used in the scalar Task I analysis. The data construction holds out one third of unique image IDs for evaluation, using seed 42, and prepares annotator-specific training and validation sets from the remaining images. With six annotators, excluding A and B leaves at most four references. All reported results below use the corrected `task_II_alt_modified` output.
 
-The implementation reports results at a tuning field named `prob`. The supplied workflow calls it alpha-like but does not specify how it allocates $\alpha_\Delta$, $\alpha_g$, and $\gamma$. We retain that field name in the empirical tables rather than equating it with the total error bound in @eq-false-certificate.
+In this run, the configuration field `prob` is mapped to the theoretical terms as follows: $\alpha_\Delta=\alpha_g=\gamma=\text{prob}/3$. The nominal sum is therefore `prob`, subject to the assumptions of the corresponding procedure. Here a rejection means that the procedure certifies the direction of the comparison; the reported rejection percentages are descriptive frequencies of that decision.
 
-| Reported `prob` | Certified configurations | Configurations evaluated | Certification fraction |
-|---:|---:|---:|---:|
-| 0.01 | 2 | 330 | 0.61% |
-| 0.05 | 10 | 330 | 3.03% |
-| 0.10 | 21 | 330 | 6.36% |
-| 0.20 | 60 | 330 | 18.18% |
+Certification is uncommon at the smallest error budget. Across all 330 configurations, the rejection percentage rises from 0.6% at a total error budget of 0.01 to 18.2% at 0.20. At 0.20, the percentages are 10%, 23.3%, and 46.7% with 2, 3, and 4 references. These are descriptive rates over enumerated configurations, which reuse annotators and images. They measure how often the procedure reaches a certification decision, not its accuracy against known ground truth.
 
-::: {.result-placeholder}
-Figure awaiting imported result file (`part2-continuous-by-k`).
+::: {#result-continuous-task2 .ab-result}
+
+::: {.ab-result-title}
+How often does the procedure certify a comparison?
 :::
 
-**Figure caption.** Certification fractions by reference-panel size and the implementation's `prob` setting for the R11–R16 scalar experiment. Each cell uses the actual number of evaluated configurations at that K. Configurations reuse annotators and data. The percentages describe how often the working-model procedure issues a certificate, not measured accuracy against a known latent target.
+::: {.ab-widget data-widget="continuous-heatmap"}
 
-At the most stringent reported setting, the procedure certifies 2 of 330 configurations. This rises to 60 of 330 at the most permissive setting. Most configurations remain uncertified even there. That pattern is compatible with a rule that requires a sufficiently strong comparison margin relative to reference distortion and sampling uncertainty; it does not establish that the remaining references are wrong.
+| | 0.01 | 0.05 | 0.10 | 0.20 |
+|---|---:|---:|---:|---:|
+| 2 references | 0.6% | 1.7% | 4.4% | 10% |
+| 3 references | 0.8% | 3.3% | 6.7% | 23.3% |
+| 4 references | 0% | 10% | 16.7% | 46.7% |
 
-The results also illustrate the difference between a certificate's nominal justification and its observed frequency. We can count how often the implemented rule passes. Without an observed latent target, these counts do not directly measure false-certification probability. The filename's `true_rate` field should therefore be read here as a certification fraction, not a truth or accuracy rate. This experiment reports certification fractions only; no power analysis is computed for the continuous/scalar real-data setting, since the latent target here is not directly observed.
+:::
+
+::: {.ab-caption}
+Rejection percentage by number of references (rows) and total error budget (columns).
+:::
+
+:::
+
+The rows contain different numbers and compositions of reference panels. The rise across rows therefore does not mean that any single comparison passes once more references are added, and it is not a causal effect estimated from independent resampling. Most configurations remain uncertified even at a total error budget of 0.20. That pattern is compatible with a rule that requires a sufficiently strong comparison margin relative to reference distortion and sampling uncertainty; it does not establish that the remaining references are wrong. Without an observed latent target, these counts do not directly measure false-certification probability.
+
+::: {.callout-note collapse="true" title="Experiment notes"}
+
+Each total error budget (`prob`) evaluates 330 configurations: 180 with 2 references, 120 with 3, and 30 with 4. The split-total calibration allocates prob / 3 to each of $\alpha_\Delta$, $\alpha_g$, and $\gamma$. Each percentage is the number of certification decisions divided by the configurations in that cell; select a cell in the heatmap to see its count.
+
+Pooled over K, the procedure certifies 2/330, 10/330, 21/330, and 60/330 configurations at prob = 0.01, 0.05, 0.10, and 0.20. These pooled percentages are computed from total counts, not by averaging the three row percentages.
+
+The number of evaluation images depends on the compared human B: R11 512, R12 549, R13 535, R14 485, R15 551, R16 547.
+
+In the source files, `n_true` and `true_percent` count decisions equal to True, that is, certification decisions. They are not counts of correct certifications or accuracy rates. `B_true` identifies the compared human annotator, not a latent ground truth.
+
+[Rejection percentages by K and prob (CSV)](data/task2-scalar/by-k-prob.csv) · [All 1,320 configuration results (CSV)](data/task2-scalar/configurations.csv) · [Run metadata (JSON)](data/task2-scalar/meta.json)
+
+:::
+
+::: {.callout-note collapse="true" title="Inspect one comparison"}
+
+Choose a comparison and a total error budget to see every reference panel evaluated for it. A panel is certified when the observed gap between model and human loss exceeds the gap the procedure requires.
+
+::: {.ab-widget data-widget="continuous-inspect"}
+This interactive table requires JavaScript. The full results are in the configuration CSV above.
+:::
+
+"Not certified" means that the procedure reaches no conclusion for that panel. It does not mean that the opposite direction holds or that the reference has been shown to be unreliable.
+
+:::
 
 ### What this part adds
 

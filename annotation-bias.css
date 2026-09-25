@@ -1,0 +1,871 @@
+/* Scoped styling for the "annotation-bias" article only. */
+
+:root {
+  --article-ink: #25282b;
+  --article-muted: #626970;
+  --article-accent: #315c85;
+  --article-line: #dfe3e6;
+  --article-panel: #f6f7f8;
+  --article-radius: 8px;
+}
+
+body {
+  background: #ffffff;
+  color: var(--article-ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+/* Title block */
+#title-block-header .title {
+  text-align: center;
+  font-weight: 700;
+  font-size: 32px;
+  line-height: 1.2;
+}
+
+#title-block-header .subtitle {
+  text-align: center;
+  font-size: 18px;
+  color: var(--article-muted);
+  font-weight: 400;
+}
+
+/* Replaced by the hand-written .article-authors line below, which adds
+   per-author superscript footnote links (affiliations) that Quarto's
+   auto-generated author block can't do on its own. Selector must match
+   Bootstrap's own `#title-block-header.quarto-title-block.default
+   .quarto-title-meta { display: grid }` specificity to override it. */
+#title-block-header.quarto-title-block.default .quarto-title-meta {
+  display: none;
+}
+
+.article-authors {
+  text-align: center;
+  font-size: 16px;
+  color: var(--article-muted);
+  margin: 0.25em 0 1.5em;
+}
+
+.article-authors sup {
+  font-size: 0.75em;
+}
+
+@media (max-width: 768px) {
+  #title-block-header .title {
+    font-size: 28px;
+  }
+}
+
+/* Summary block */
+.article-summary {
+  background: var(--article-panel);
+  border-radius: var(--article-radius);
+  padding: 18px 20px;
+  margin: 1.5em 0;
+}
+
+/* Section headings */
+h2 {
+  margin-top: 2.25em;
+}
+
+h3, h4 {
+  text-transform: none;
+}
+
+/* Part tabset */
+.panel-tabset > .nav-tabs {
+  border-bottom: 1px solid var(--article-line);
+}
+
+.panel-tabset > .nav-tabs .nav-link {
+  color: var(--article-muted);
+  border: none;
+  border-bottom: 2px solid transparent;
+}
+
+.panel-tabset > .nav-tabs .nav-link.active {
+  color: var(--article-ink);
+  border-bottom: 2px solid var(--article-accent);
+  background: transparent;
+}
+
+/* Links */
+a {
+  color: var(--article-accent);
+}
+
+a:hover,
+a:focus {
+  text-decoration: underline;
+}
+
+/* Tables */
+.table {
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  border-color: var(--article-line);
+  padding: 0.45em 0.6em;
+}
+
+.table td:not(:first-child),
+.table th:not(:first-child) {
+  text-align: right;
+}
+
+table caption,
+.table-caption {
+  font-size: 15px;
+  color: var(--article-muted);
+}
+
+/* Callouts (proofs / folded content) */
+.callout-note {
+  background: var(--article-panel);
+}
+
+.callout-note .callout-title-container {
+  font-size: 16px;
+}
+
+.callout.callout-style-default .callout-body {
+  font-size: 16px;
+}
+
+/* ---------- Result components (results.js) ---------- */
+
+.ab-result {
+  margin: 1.5em 0 1.25em;
+}
+
+.ab-widget {
+  container-type: inline-size;
+  font-variant-numeric: tabular-nums;
+}
+
+.ab-result-title {
+  font-size: 21px;
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--article-ink);
+  margin-bottom: 0.5em;
+}
+
+.ab-lead {
+  font-size: 17px;
+  margin: 0 0 0.6em;
+}
+
+.ab-detail,
+.ab-caption {
+  font-size: 16px;
+  color: var(--article-muted);
+  margin: 0.5em 0 0;
+}
+
+.ab-note,
+.ab-legend,
+.ab-matrix-legend,
+.ab-heat-legend {
+  font-size: 15px;
+  color: var(--article-muted);
+}
+
+.ab-note {
+  margin: 0.5em 0 1em;
+}
+
+.ab-scroll {
+  overflow-x: auto;
+}
+
+/* Controls: one line, wraps on narrow screens */
+.ab-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5em 1.5em;
+  margin: 0 0 0.8em;
+  font-size: 17px;
+}
+
+.ab-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  max-width: 100%;
+}
+
+.ab-field label,
+.ab-field-label {
+  color: var(--article-muted);
+}
+
+.ab-field select {
+  font: inherit;
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #c9cfd4;
+  border-radius: 4px;
+  background: #fff;
+  color: var(--article-ink);
+}
+
+.ab-seg {
+  display: inline-flex;
+}
+
+.ab-seg button {
+  font: inherit;
+  padding: 4px 12px;
+  margin-left: -1px;
+  border: 1px solid #c9cfd4;
+  background: #fff;
+  color: var(--article-ink);
+  cursor: pointer;
+}
+
+.ab-seg button:first-child {
+  margin-left: 0;
+  border-radius: 4px 0 0 4px;
+}
+
+.ab-seg button:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.ab-seg button[aria-pressed="true"] {
+  background: var(--article-accent);
+  border-color: var(--article-accent);
+  color: #fff;
+}
+
+.ab-seg button:focus-visible,
+.ab-field select:focus-visible,
+.ab-selectable:focus-visible,
+.ab-heat-cell:focus-visible {
+  outline: 2px solid var(--article-accent);
+  outline-offset: 2px;
+}
+
+.ab-selectable {
+  cursor: pointer;
+}
+
+/* Task I comparison matrix */
+.ab-matrix {
+  border-collapse: separate;
+  border-spacing: 4px;
+  margin: 0 auto 0.2em;
+}
+
+.ab-matrix th {
+  padding: 0.2em 0.7em;
+  font-size: 17px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.ab-matrix thead th {
+  color: var(--article-muted);
+  text-align: center;
+}
+
+.ab-matrix tbody th {
+  text-align: left;
+  color: var(--article-ink);
+}
+
+.ab-matrix td {
+  min-width: 8.5em;
+  padding: 0.5em 0.9em;
+  border-radius: 4px;
+  text-align: center;
+  background: #eef0f2;
+}
+
+.ab-matrix td.is-detected {
+  background: #cfe0f1;
+}
+
+.ab-matrix td.ab-matrix-diag {
+  background: transparent;
+  color: var(--article-muted);
+}
+
+.ab-matrix td.is-highlight,
+.ab-matrix td.is-selected {
+  box-shadow: inset 0 0 0 2px var(--article-accent);
+}
+
+.ab-matrix-p {
+  display: block;
+  font-size: 18px;
+  white-space: nowrap;
+}
+
+.ab-matrix-thr {
+  display: block;
+  font-size: 15px;
+  color: var(--article-muted);
+  white-space: nowrap;
+}
+
+.ab-matrix-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3em 1.2em;
+  margin: 0 0 0.4em;
+}
+
+.ab-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 0.4em;
+  vertical-align: -2px;
+  border: 1px solid #d5dade;
+  border-radius: 3px;
+  background: #eef0f2;
+}
+
+.ab-swatch.is-detected {
+  border-color: #b3cbe3;
+  background: #cfe0f1;
+}
+
+.ab-short {
+  display: none;
+}
+
+/* The matrix as a list, used on narrow screens */
+.ab-matrix-list {
+  display: none;
+}
+
+.ab-matrix-group {
+  margin-bottom: 0.6em;
+}
+
+.ab-matrix-group-title {
+  font-size: 17px;
+  margin-bottom: 0.25em;
+}
+
+.ab-matrix-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8em;
+  margin-bottom: 4px;
+  padding: 0.45em 0.7em;
+  border-radius: 4px;
+  background: #eef0f2;
+}
+
+.ab-matrix-item.is-detected {
+  background: #cfe0f1;
+}
+
+.ab-matrix-item.is-highlight,
+.ab-matrix-item.is-selected {
+  box-shadow: inset 0 0 0 2px var(--article-accent);
+}
+
+.ab-matrix-item-who,
+.ab-matrix-item-p {
+  display: flex;
+  flex-direction: column;
+}
+
+.ab-matrix-item-p {
+  text-align: right;
+}
+
+.ab-matrix-item-main {
+  font-size: 17px;
+}
+
+/* Paired dot plot: how the loss comparison moves with the reference */
+.ab-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em 1.5em;
+  margin-bottom: 0.3em;
+}
+
+.ab-dot-row {
+  display: grid;
+  grid-template-columns: 13em minmax(0, 1fr);
+  column-gap: 1em;
+  align-items: center;
+  font-size: 17px;
+}
+
+.ab-dot-row.is-highlight {
+  background: rgba(49, 92, 133, 0.09);
+}
+
+.ab-dot-label {
+  padding-left: 0.4em;
+  line-height: 1.3;
+}
+
+.ab-dot-main,
+.ab-dot-sub {
+  display: block;
+  white-space: nowrap;
+}
+
+.ab-dot-sub {
+  font-size: 15px;
+  color: var(--article-muted);
+}
+
+.ab-dot-head {
+  font-size: 15px;
+  color: var(--article-muted);
+}
+
+.ab-dot-sides {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+}
+
+.ab-dot-track {
+  position: relative;
+  height: 46px;
+}
+
+.ab-zero {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid #9aa3ab;
+}
+
+.ab-link {
+  position: absolute;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: #c3cad1;
+}
+
+.ab-pt {
+  position: absolute;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  transform: translate(-50%, -50%);
+}
+
+.ab-pt-self {
+  border-radius: 50%;
+  background: #7d868e;
+}
+
+.ab-pt-ext {
+  width: 10px;
+  height: 10px;
+  background: var(--article-accent);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.ab-pt-static {
+  position: relative;
+  display: inline-block;
+  top: auto;
+  vertical-align: middle;
+  transform: none;
+}
+
+.ab-pt-static.ab-pt-ext {
+  margin: 0 2px;
+  transform: rotate(45deg);
+}
+
+.ab-ticks {
+  height: 24px;
+}
+
+.ab-tick {
+  position: absolute;
+  top: 3px;
+  transform: translateX(-50%);
+  font-size: 15px;
+  color: var(--article-muted);
+  white-space: nowrap;
+}
+
+.ab-axis-caption {
+  text-align: center;
+  font-size: 15px;
+  color: var(--article-muted);
+}
+
+/* Horizontal bars (synthetic Bernoulli Task II) */
+.ab-bar-row {
+  display: grid;
+  grid-template-columns: 9em minmax(0, 1fr) 4.5em;
+  column-gap: 1em;
+  align-items: center;
+  min-height: 42px;
+  font-size: 17px;
+}
+
+.ab-bars .ab-bar-row.is-selected {
+  box-shadow: inset 3px 0 0 var(--article-accent);
+}
+
+.ab-bar-label {
+  padding-left: 0.4em;
+  white-space: nowrap;
+}
+
+.ab-bar-value {
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ab-bar-track {
+  position: relative;
+  height: 18px;
+  background: #eef1f3;
+}
+
+.ab-bar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--article-accent);
+}
+
+.ab-bar-axis {
+  min-height: 0;
+}
+
+.ab-bar-axis .ab-bar-track {
+  height: 24px;
+  background: none;
+}
+
+/* Tables built by the components */
+.ab-table td,
+.ab-table th {
+  font-size: 17px;
+}
+
+.ab-table .ab-num {
+  text-align: right;
+}
+
+.ab-inspect-table tr.is-cert td {
+  background-color: #e3edf7;
+}
+
+.ab-table tr.is-selected td {
+  box-shadow: inset 0 2px 0 var(--article-accent), inset 0 -2px 0 var(--article-accent);
+}
+
+.ab-group-row th {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--article-muted);
+  background: var(--article-panel);
+}
+
+/* Heatmaps (continuous Task II; all 27 synthetic aspects) */
+.ab-heatmap {
+  border-collapse: separate;
+  border-spacing: 4px;
+  margin: 0 auto 0.3em;
+}
+
+.ab-heatmap th {
+  padding: 0 0.4em;
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--article-muted);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.ab-heatmap tbody th {
+  padding-right: 0.8em;
+  color: var(--article-ink);
+  text-align: left;
+}
+
+.ab-heatmap .ab-heat-group {
+  color: var(--article-ink);
+  border-bottom: 1px solid var(--article-line);
+}
+
+.ab-heatmap td {
+  padding: 0;
+}
+
+.ab-heat-cell {
+  display: block;
+  width: 100%;
+  min-width: 5.5em;
+  padding: 0.7em 0.5em;
+  border: 0;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 18px;
+  text-align: center;
+}
+
+button.ab-heat-cell {
+  cursor: pointer;
+}
+
+.ab-heat-cell.is-selected,
+.ab-heatmap tr.is-selected .ab-heat-cell {
+  box-shadow: inset 0 0 0 2px var(--article-ink);
+}
+
+.ab-heatmap tr.is-selected th {
+  font-weight: 700;
+}
+
+/* Every heatmap and comparison matrix sits centered, with its legend,
+   detail line and caption centered under it. */
+.ab-heatmap,
+.ab-matrix {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ab-heat-legend,
+.ab-matrix-legend {
+  justify-content: center;
+}
+
+[data-widget="continuous-heatmap"] .ab-detail,
+[data-widget="scalar-matrix"] .ab-detail,
+[data-widget="bernoulli-task1"] .ab-detail,
+#result-continuous-task2 .ab-caption,
+#result-scalar-task1 .ab-caption,
+#result-real-bernoulli-task1 .ab-caption {
+  text-align: center;
+}
+
+.ab-heatmap-aspects .ab-heat-cell {
+  min-width: 7em;
+  padding: 0.25em 0.5em;
+  font-size: 17px;
+}
+
+.ab-heat-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  margin: 0.3em 0;
+}
+
+.ab-heat-legend-scale {
+  display: inline-flex;
+  flex-direction: column;
+  width: 180px;
+}
+
+.ab-heat-legend-bar {
+  height: 10px;
+  border-radius: 2px;
+}
+
+.ab-heat-legend-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+/* Narrow component (phones, narrow preview panes) */
+@container (max-width: 559px) {
+  .ab-long { display: none; }
+  .ab-short { display: inline; }
+
+  #quarto-document-content .ab-matrix { display: none; }
+  .ab-matrix-list { display: block; }
+
+  .ab-heatmap {
+    border-spacing: 2px;
+  }
+
+  .ab-heatmap th { padding: 0 0.2em; }
+  .ab-heatmap tbody th { padding-right: 0.4em; }
+
+  .ab-heat-cell,
+  .ab-heatmap-aspects .ab-heat-cell {
+    min-width: 0;
+    padding-left: 0.25em;
+    padding-right: 0.25em;
+  }
+
+  .ab-heatmap-aspects tbody th {
+    white-space: normal;
+  }
+
+  .ab-heatmap-aspects .ab-heat-cell {
+    padding-left: 0.1em;
+    padding-right: 0.1em;
+  }
+
+  .ab-heat-legend {
+    flex-wrap: wrap;
+  }
+
+  .ab-field {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .ab-field label,
+  .ab-field-label {
+    white-space: nowrap;
+  }
+
+  .ab-field select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .ab-table td,
+  .ab-table th {
+    padding: 0.4em 0.35em;
+  }
+
+  #quarto-document-content .ab-inspect-table {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  .ab-inspect-table th:first-child,
+  .ab-inspect-table td:first-child {
+    width: 44%;
+  }
+
+  .ab-dot-row {
+    grid-template-columns: minmax(0, 1fr);
+    padding-top: 0.35em;
+  }
+
+  .ab-dot-track {
+    height: 30px;
+  }
+
+  .ab-dot-head .ab-dot-label,
+  .ab-dot-axis .ab-dot-label {
+    display: none;
+  }
+
+  .ab-bar-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "label value" "track track";
+    padding-top: 0.35em;
+  }
+
+  .ab-bar-label { grid-area: label; }
+  .ab-bar-track { grid-area: track; }
+  .ab-bar-value { grid-area: value; text-align: right; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ab-bar-fill,
+  .ab-pt,
+  .ab-link {
+    transition: all 150ms ease-out;
+  }
+}
+
+/* Figure captions */
+figcaption,
+.figure-caption {
+  font-size: 14px;
+  color: var(--article-muted);
+}
+
+/* Reading column grows with the screen instead of Quarto's fixed ~800px.
+   Same selector as Quarto's own rule so this later rule wins. */
+@media (min-width: 992px) {
+  body.fullcontent:not(.floating):not(.docked) .page-columns {
+    grid-template-columns:
+      [screen-start] 1.5em [screen-start-inset] 1fr
+      [page-start page-start-inset] 35px [body-start-outset] 35px
+      [body-start] 1.5em [body-content-start] minmax(500px, min(1200px, 80vw))
+      [body-content-end] 1.5em [body-end] 35px [body-end-outset] 35px
+      [page-end-inset page-end] 1fr [screen-end-inset] 1.5em [screen-end];
+  }
+}
+
+/* Long reference URLs (DOIs, proceedings links) must wrap on phones */
+.csl-entry,
+.footnotes {
+  overflow-wrap: anywhere;
+}
+
+/* Long equations and wide tables scroll inside themselves, never the page */
+.math.display,
+mjx-container[display="true"] {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Tighter space around display equations: drop MathJax's own 1em
+   margins and keep only the normal paragraph spacing. */
+body .math.display > mjx-container.MathJax {
+  margin: 0;
+}
+
+@media (max-width: 767.98px) {
+  #quarto-document-content table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+}
+
+/* Print: show all three Parts (not just the active tab) in order */
+@media print {
+  .panel-tabset > ul.nav-tabs {
+    display: none;
+  }
+
+  .panel-tabset > .tab-content > .tab-pane {
+    display: block !important;
+    opacity: 1 !important;
+  }
+
+  .callout-note[data-callout-collapse] > .callout-body-container,
+  .callout.callout-note .callout-collapse {
+    display: block !important;
+  }
+}
+
+/* 隐藏 Quarto 预览的渲染日志浮层 */
+.fui-DialogSurface:has(.ansi-display) {
+  display: none !important;
+}

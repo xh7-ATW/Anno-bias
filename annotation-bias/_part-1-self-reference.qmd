@@ -50,11 +50,7 @@ A negative gap favors the model; a positive gap favors B. The evaluation metric 
 Self-reference uses J=A. External-reference evaluation uses J=C. Their difference is
 
 $$
-\begin{aligned}
-S_{A,C}
-&=\Delta_C-\Delta_A\\
-&=2\mathbb E\!\left[(Y_A-Y_C)(p_A(X)-Y_B)\right].
-\end{aligned}
+S_{A,C}=\Delta_C-\Delta_A=2\mathbb E\!\left[(Y_A-Y_C)(p_A(X)-Y_B)\right].
 $$ {#eq-self-reference}
 
 If $S_{A,C}>0$, the gap is more favorable to the model when A is the reference. This definition measures a change in the comparison. It does not require $\Delta_A<0$ or a change of sign between $\Delta_A$ and $\Delta_C$.
@@ -84,13 +80,7 @@ $$
 In the additive formulation this becomes
 
 $$
-\begin{aligned}
-\frac{S_{A,C}}{2}
-={}&\mathbb E_X[b_A^2]
--\mathbb E_X[b_A b_B]\\
-&-\mathbb E_X[b_C(b_A-b_B)]
-+\mathbb E_X[(b_A-b_C)h_A].
-\end{aligned}
+\frac{S_{A,C}}{2}=\mathbb E_X[b_A^2]-\mathbb E_X[b_A b_B]-\mathbb E_X[b_C(b_A-b_B)]+\mathbb E_X[(b_A-b_C)h_A].
 $$ {#eq-bias-decomposition}
 
 The first term captures alignment with A's own systematic tendencies. The next two depend on how the particular annotators agree or differ. The last reflects imperfect learning. This is why self-reference has a systematic mechanism without having the same sign for every fixed trio.
@@ -132,11 +122,7 @@ with probability at least $1-\delta$. Here $\mathfrak R_n$ is the expected Radem
 A useful statement that also covers binary responses sets $m(x)=\mathbb E_r\mu_r(x)$. Provided the fit on A does not use B or C,
 
 $$
-\begin{aligned}
-\mathbb E[S_{A,C}]
-={}&2\mathbb E_X\operatorname{Var}_r\{\mu_r(X)\}\\
-&+2\mathbb E_{A,\mathrm{train}}\mathbb E_X[(\mu_A-m)h_A].
-\end{aligned}
+\mathbb E[S_{A,C}]=2\mathbb E_X\operatorname{Var}_r\{\mu_r(X)\}+2\mathbb E_{A,\mathrm{train}}\mathbb E_X[(\mu_A-m)h_A].
 $$
 
 The absolute value of the second term is at most
@@ -231,38 +217,111 @@ The processed aspects are: Aortic enlargement; Atelectasis; Calcification; Cardi
 
 ### Scalar result: a positive effect in four of six comparisons
 
-We evaluate all six ordered assignments of A, B, and C from R8, R9, and R10. Four reject $S_{A,C}\leq0$ at every reported nominal level: 0.001, 0.01, 0.05, and 0.10. These are the two configurations with R8 as the training annotator and the two with R9. The two configurations with R10 as the training annotator have negative estimated effects and do not reject.
+Positive self-reference effects are detected in both comparisons for the R8- and R9-trained models. No positive effect is detected for the R10-trained model.
 
-| Training annotator A | Competitor B | External reference C | Reported self-reference result |
-|---|---|---|---|
-| R8 | R9 | R10 | Positive; rejects at all four reported levels |
-| R8 | R10 | R9 | Positive; rejects at all four reported levels |
-| R9 | R8 | R10 | Positive; rejects at all four reported levels |
-| R9 | R10 | R8 | Positive; rejects at all four reported levels |
-| R10 | R8 | R9 | Negative estimate; does not reject |
-| R10 | R9 | R8 | Negative estimate; does not reject |
+::: {#result-scalar-task1 .ab-result}
 
-::: {.result-placeholder}
-Figure awaiting imported result file (`part1-scalar-effects`).
+::: {.ab-result-title}
+Self-reference effects across models
 :::
 
-**Figure caption.** Estimated self-reference effects for the six ordered Task I configurations. Positive values mean that using the training annotator as reference moves the model–human squared-loss comparison in the model's favor. Estimates and any displayed uncertainty bounds are computed over 1,500 paired images. The configurations reuse the same annotator panel and evaluation images.
+::: {.ab-widget data-widget="scalar-matrix"}
 
-These results support a self-reference effect in the four identified configurations. The R10 cases also matter: the sign can differ across fixed trios, as the decomposition predicts. The six tests are dependent comparisons, not six independent samples from an annotator population. Their rejection count should not be interpreted as the population frequency of annotation bias.
+| Model | Human R8 | Human R9 | Human R10 |
+|---|---:|---:|---:|
+| R8-trained model | — | 8.47 × 10⁻⁹ (p < 0.05) | 1.88 × 10⁻⁹ (p < 0.05) |
+| R9-trained model | 3.46 × 10⁻¹¹ (p < 0.05) | — | 5.03 × 10⁻⁴ (p < 0.05) |
+| R10-trained model | 0.999921 (p ≥ 0.05) | 0.999995 (p ≥ 0.05) | — |
 
-A positive $\widehat S$ alone does not show that the model was ranked above B under A and below B under C. That stronger statement requires inspecting the signs of both comparison gaps. The supplied summary does not establish how many ranking reversals occurred, so we do not report such a count.
+:::
 
-### Real Bernoulli Task I: completed protocol, results pending
+::: {.ab-caption}
+One-sided p-values for a positive self-reference effect over 1,500 test images; nominal threshold 0.05. In each comparison the external reference is the remaining radiologist.
+:::
+
+:::
+
+The two comparisons for the R10-trained model have negative estimated effects: as the decomposition predicts, the direction can differ across fixed trios. The six tests reuse one annotator panel and one set of images, so they are dependent comparisons rather than six independent samples, and their count should not be read as a population frequency of annotation bias. The result identifies a reference effect in particular comparisons; it does not establish which annotator is clinically correct. A detectable reference effect does not by itself imply a reversal in who performs better.
+
+::: {.ab-note}
+The decisions are the same at the nominal levels 0.001, 0.01, 0.05, and 0.10. Estimated effects, loss differences, and standard errors are in the [Task I scalar summary (CSV)](data/task1-scalar/summary.csv).
+:::
+
+### Real Bernoulli Task I: the same test, finding by finding
 
 The binary experiment repeats the self-reference analysis on each of the 27 aspects, using the same R8–R10 splits and 1,500 paired evaluation images. It reports both aspect-specific effects and an image-level mean across all 27 aspects. This asks whether the scalar result conceals differences between individual labels.
 
-The workflow includes a validation-set temperature-scaling step, with planned BCE, Brier-score, and calibration-error diagnostics before and after scaling. Its calibration outputs are not yet documented as completed in the supplied record. Temperature scaling rescales logits to improve probability calibration [@guo2017calibration]. It does not remove annotator-specific tendencies by definition. The self-reference analysis must identify whether it uses raw or temperature-scaled probabilities; these are different fitted predictors.
+A separate validation analysis fitted one global temperature per annotator-specific model. Calibration diagnostics are available below.
 
-::: {.result-placeholder}
-Results pending: real Bernoulli Task I self-reference analysis (`part1-real-bernoulli-results`).
+<!-- [[VERIFY:real-bernoulli-task1-probability-version]] The supplied Task I summary does not record whether the test used raw or temperature-scaled probabilities. -->
+
+::: {.callout-note collapse="true" title="Probability calibration details"}
+
+Temperature scaling rescales logits to improve probability calibration [@guo2017calibration]; it does not remove annotator-specific tendencies by definition. Each model has one temperature, fitted on its validation set: 1.07, 1.03, and 0.999 for the R8-, R9-, and R10-trained models. This is separate from the calibration step used in Task II.
+
+Each value shows the score before → after scaling.
+
+| Model | Calibration error | Brier score |
+|---|---|---|
+| R8 model | 0.00419 → 0.00386 | 0.0281 → 0.0281 |
+| R9 model | 0.00426 → 0.00366 | 0.0452 → 0.0452 |
+| R10 model | 0.00263 → 0.00261 | 0.0314 → 0.0314 |
+
+Calibration error (ECE) falls for all three models; Brier scores change by less than 0.0001. [Calibration summary (CSV)](data/task1-bernoulli/calibration/calibration-summary.csv) · [Per-finding calibration (CSV)](data/task1-bernoulli/calibration/calibration-aspects.csv)
+
 :::
 
-**Draft status.** Final real-data Bernoulli Task I self-reference results are not yet available in the current experiment record. No per-aspect rejection counts, aggregate effects, or conclusions from this run are reported here.
+For binary findings, changing from the training radiologist to an external reference shifts the average Brier-loss comparison in the positive direction in all six comparisons. Four of these shifts are significant at the nominal 0.05 threshold. In every comparison the model keeps the lower average loss under both references, so an average shift should not be confused with a ranking reversal. Selecting an individual finding reveals variation that the average across findings hides.
+
+::: {#result-real-bernoulli-task1 .ab-result}
+
+::: {.ab-result-title}
+Self-reference effects by finding
+:::
+
+::: {.ab-widget data-widget="bernoulli-task1"}
+
+Average across 27 findings: positive self-reference effects are detected in 4 of 6 comparisons at threshold 0.05.
+
+| Model | Human R8 | Human R9 | Human R10 |
+|---|---:|---:|---:|
+| R8-trained model | — | 0.00813 (p < 0.05) | 0.00233 (p < 0.05) |
+| R9-trained model | 4.50 × 10⁻⁴ (p < 0.05) | — | 0.00110 (p < 0.05) |
+| R10-trained model | 0.0696 (p ≥ 0.05) | 0.123 (p ≥ 0.05) | — |
+
+:::
+
+::: {.ab-caption}
+One-sided p-values over 1,500 test images; unadjusted nominal tests. In each comparison the external reference is the remaining radiologist.
+:::
+
+:::
+
+An average shift is not the same as a change in who performs better. The chart below shows, for the finding selected above, how the loss comparison moves when the external radiologist replaces the training radiologist as the reference.
+
+::: {#result-real-bernoulli-change .ab-result}
+
+::: {.ab-result-title}
+How the comparison moves with the reference
+:::
+
+::: {.ab-widget data-widget="bernoulli-change"}
+This chart requires JavaScript. The values are in the CSV linked below.
+:::
+
+::: {.ab-caption}
+Each row compares a trained model with one human radiologist. The distance between the two points is the reference effect, not a confidence interval. The axis rescales with the selected finding.
+:::
+
+:::
+
+[See an observed reversal for Atelectasis](#result-real-bernoulli-change){.ab-instance-link data-target="bernoulli-task1" data-aspect="Atelectasis" data-alpha="0.05" data-highlight="R8|R9|R10"}
+
+For Atelectasis, the R8-trained model has a lower loss than R9 when judged by R8, but a higher loss when judged by R10. The observed ranking therefore reverses. The one-sided test detects a positive effect (p = 0.0295); it does not separately certify the sign of each loss gap or establish that R10 supplies the ground truth.
+
+::: {.ab-note}
+Tests use 1,500 image-level observations, including the average across findings, which averages the 27 findings within each image. The 27 findings × six comparisons are unadjusted nominal tests. Models are trained with an unweighted binary cross-entropy loss; the comparison uses Brier (squared) loss. Full statistics are in the [Task I Bernoulli results (CSV)](data/task1-bernoulli/summary.csv).
+:::
 
 ### What this part establishes
 
