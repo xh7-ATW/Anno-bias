@@ -42,13 +42,34 @@
     return -1;
   }
 
+  function scrollToTabset() {
+    var tabset = document.getElementById("research-parts");
+    if (!tabset) return;
+    var top = tabset.getBoundingClientRect().top + window.pageYOffset - 16;
+    window.scrollTo(0, Math.max(0, top));
+  }
+
+  // Jump to the tabs, then align again once the new pane is shown, since
+  // swapping panes can change the page layout above and around the tabs.
+  function goToPart(index) {
+    var button = getTabButtons()[index];
+    if (button && !button.classList.contains("active")) {
+      button.addEventListener("shown.bs.tab", function () {
+        scrollToTabset();
+        requestAnimationFrame(scrollToTabset);
+      }, { once: true });
+    }
+    showTab(index);
+    scrollToTabset();
+  }
+
   function activateFromHash() {
     var hash = window.location.hash.replace("#", "");
     if (!hash) return;
 
     var partIndex = PART_IDS.indexOf(hash);
     if (partIndex !== -1) {
-      showTab(partIndex);
+      goToPart(partIndex);
       return;
     }
 
@@ -81,4 +102,15 @@
   });
 
   window.addEventListener("hashchange", activateFromHash);
+
+  // In-text links such as [Part II](#part-2): switch to that Part and scroll to
+  // the tabs, also when the same link is clicked twice (no hashchange then).
+  document.addEventListener("click", function (e) {
+    var link = e.target.closest && e.target.closest('a[href^="#part-"]');
+    if (!link) return;
+    var index = PART_IDS.indexOf(link.getAttribute("href").slice(1));
+    if (index === -1) return;
+    e.preventDefault();
+    goToPart(index);
+  });
 })();

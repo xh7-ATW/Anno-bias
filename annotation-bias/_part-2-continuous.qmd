@@ -2,7 +2,7 @@
 
 ### Why use annotator-specific models as references?
 
-An average of several annotators is a natural candidate reference. Label-aggregation methods have long used models of observer error to learn from noisy judgments [@dawid1979observer; @raykar2010crowds]. Here we use aggregation for a narrower purpose: assessing whether a comparison keeps the same direction under a specified latent target.
+[Part I](#part-1) showed that the training annotator is not a neutral reference. A natural alternative is the average of several other annotators. Label-aggregation methods have long used models of observer error to learn from noisy judgments [@dawid1979maximum; @raykar2010learning]. Here we use aggregation for a narrower purpose: to test whether a reference gives a model–human comparison the same direction as the latent target would.
 
 A practical obstacle is sparse overlap. In the independent-label portion of VinDr-CXR, an image generally has three annotations, not labels from every member of a larger panel. We therefore train an annotator-specific predictor $\widehat\mu_r$ from each reference annotator's available data and evaluate those predictors on common images. For a reference set $\mathcal R$ of size K, excluding A and B, define
 
@@ -13,28 +13,28 @@ $$
 
 This lets us construct common-image references from annotators who did not all label the evaluation images. Its immediate benefit is flexibility in forming a reference panel. We do not measure a labeling-cost reduction in these experiments. The method still needs observed B responses for the model–human comparison.
 
-A trained reference is also an approximation. Write $\widehat\mu_r=\mu_r+h_r$ and $\bar h_{\mathcal R}=K^{-1}\sum_r h_r$. The relevant error is not simply its validation loss; it is how its error aligns with the model–human difference. One idealizing condition used below is
+A trained reference is also an approximation. Write $\widehat\mu_r=\mu_r+\widehat e_r$ and $\bar{\widehat e}_{\mathcal R}=K^{-1}\sum_r \widehat e_r$. The relevant error is not simply its validation loss; it is how its error aligns with the model–human difference. One idealizing condition used below is
 
 $$
-\mathbb E[\bar h_{\mathcal R}(X)(p_A(X)-Y_B)]=0.
+\mathbb E[\bar{\widehat e}_{\mathcal R}(X)(\widehat\mu_A(X)-Y_B)]=0.
 $$ {#eq-reference-orthogonality}
 
 This is a substantive assumption, not a consequence of using a held-out test set. Two errors can remain aligned through their dependence on the same item even when their training data are separate.
 
-### Define reliability for the comparison we actually want
+### Reliability for a specific comparison
 
-The latent-target gap is
+The gap against the latent target is
 
 $$
 \Delta^*
-=\mathbb E[(p_A(X)-\mu^*(X))^2-(Y_B-\mu^*(X))^2].
+=\mathbb E[(\widehat\mu_A(X)-\mu^*(X))^2-(Y_B-\mu^*(X))^2].
 $$ {#eq-latent-gap}
 
 The trained-reference gap is
 
 $$
 \Delta_{\widehat{\mathcal R}}
-=\mathbb E[(p_A(X)-\widehat\mu_{\mathcal R}(X))^2
+=\mathbb E[(\widehat\mu_A(X)-\widehat\mu_{\mathcal R}(X))^2
 -(Y_B-\widehat\mu_{\mathcal R}(X))^2].
 $$
 
@@ -44,10 +44,10 @@ Define the comparison-specific distortion
 
 $$
 g_{\widehat{\mathcal R}}
-=\mathbb E[(\widehat\mu_{\mathcal R}(X)-\mu^*(X))(p_A(X)-Y_B)].
+=\mathbb E[(\widehat\mu_{\mathcal R}(X)-\mu^*(X))(\widehat\mu_A(X)-Y_B)].
 $$
 
-Expanding the squared losses gives the exact identity
+Expanding the squares gives the exact identity
 
 $$
 \Delta_{\widehat{\mathcal R}}-\Delta^*
@@ -64,15 +64,15 @@ The left side measures the strength of the comparison. The right side measures h
 
 ::: {.callout-note collapse="true" title="What the latent comparison does and does not mean"}
 
-The human competitor in @eq-latent-gap is the observed response $Y_B$, not the conditional mean $\mu_B$. Thus
+In @eq-latent-gap the human side of the comparison is the observed response $Y_B$, not the conditional mean $\mu_B$. Thus
 
 $$
 \Delta^*
-=\mathbb E[(p_A-\mu^*)^2-(\mu_B-\mu^*)^2]
+=\mathbb E[(\widehat\mu_A-\mu^*)^2-(\mu_B-\mu^*)^2]
 -\mathbb E[\operatorname{Var}(Y_B\mid X,B)].
 $$
 
-Human response variability is part of this estimand. For a binary aspect the variance term is $\mu_B(1-\mu_B)$. A certified negative gap therefore concerns the stated squared-loss comparison of a soft prediction with a human response. It should not be rewritten as a general claim about diagnostic skill or as a comparison between two conditional means.
+Human response variability is part of this estimand. For a binary aspect the variance term is $\mu_B(1-\mu_B)$. A certified negative gap therefore concerns the MSE comparison defined above between a soft prediction and a human response. It should not be rewritten as a general claim about diagnostic skill or as a comparison between two conditional means.
 
 Also, @eq-population-certificate is sufficient, not necessary. A reference can preserve the direction without passing this conservative inequality.
 
@@ -83,7 +83,7 @@ Also, @eq-population-certificate is sufficient, not necessary. A reference can p
 On a main evaluation sample $D_1$ of size $n_1$, let
 
 $$
-d_i=(p_A(X_i)-\widehat\mu_{\mathcal R}(X_i))^2
+d_i=(\widehat\mu_A(X_i)-\widehat\mu_{\mathcal R}(X_i))^2
 -(Y_{B,i}-\widehat\mu_{\mathcal R}(X_i))^2.
 $$
 
@@ -101,18 +101,18 @@ $$
 \boxed{\quad L_\Delta>2B_{\mathcal R}.\quad}
 $$ {#eq-general-certificate}
 
-A negative $L_\Delta$ simply cannot pass the rule. When a certificate is issued, the sign of $\widehat\Delta$ tells us which competitor is favored. When no certificate is issued, the result is inconclusive: the gap may be too small, the reference too variable, or the bounds too conservative. Non-certification is not evidence of an incorrect reference.
+When the rule holds, we say that the procedure *certifies* the direction of the comparison, or issues a certificate. A negative $L_\Delta$ cannot pass the rule. When a certificate is issued, the sign of $\widehat\Delta$ tells us whether the model or annotator B is favored. When no certificate is issued, the result is inconclusive: the gap may be too small, the reference too variable, or the bounds too conservative. Non-certification is not evidence of an incorrect reference.
 
-### A Gaussian working model for additive reference distortion
+### A Gaussian working model for reference distortion
 
 For each trained reference, define its full contribution
 
 $$
 \widetilde g_r
-=\mathbb E[(\widehat\mu_r(X)-\mu^*(X))(p_A(X)-Y_B)].
+=\mathbb E[(\widehat\mu_r(X)-\mu^*(X))(\widehat\mu_A(X)-Y_B)].
 $$
 
-Then $g_{\widehat{\mathcal R}}=K^{-1}\sum_r\widetilde g_r$ exactly. Under the additive model, @eq-reference-orthogonality removes the average contribution of surrogate prediction errors. A Gaussian random-effects formulation additionally models the individual $\widetilde g_r$ as independent, centered effects with scale $\tau_g$.
+Then $g_{\widehat{\mathcal R}}=K^{-1}\sum_r\widetilde g_r$ exactly. Under the decomposition $\mu_r=\mu^*+b_r$ of [Part I](#part-1), @eq-reference-orthogonality removes the average contribution of surrogate prediction errors. A Gaussian random-effects formulation additionally models the individual $\widetilde g_r$ as independent, centered effects with scale $\tau_g$.
 
 For our bounded responses and sigmoid predictions, an exactly nondegenerate Gaussian distribution is incompatible with the bounded support of these contributions. We therefore treat it as a **working random-effects approximation** for the real-data procedure. Centering, independence, and its quality as an approximation are assumptions, not facts implied by the construction of an ensemble. The calibration below estimates a scale for the complete trained-reference contributions; average surrogate-error orthogonality alone does not establish their individual distribution.
 
@@ -131,13 +131,13 @@ The latent target appears in $\widetilde g_r$, so we cannot measure each contrib
 
 $$
 W_{i,r}
-=(\widehat\mu_r(X_i)-\widehat\mu_1(X_i))(p_A(X_i)-Y_{B,i}),
+=(\widehat\mu_r(X_i)-\widehat\mu_1(X_i))(\widehat\mu_A(X_i)-Y_{B,i}),
 \qquad r=2,\ldots,K.
 $$
 
 Their means estimate $\widetilde g_r-\widetilde g_1$: the unknown target cancels. The variation between these contrasts informs the between-reference scale, while their item-level covariance accounts for finite calibration-sample noise. Because all contrasts share the same baseline, their covariance is not diagonal.
 
-This is **bias-scale calibration**. It is different from the temperature scaling in Part I, which adjusts predicted probabilities using observed labels.
+This is **bias-scale calibration**. It is different from the temperature scaling in [Part I](#part-1), which adjusts predicted probabilities using observed labels.
 
 ::: {.callout-note collapse="true" title="Calibration formula and implementation"}
 
@@ -207,19 +207,17 @@ On the scale-coverage and reference-tail events, $|g_{\widehat{\mathcal R}}|\leq
 
 ### Real-data experiment: R11–R16 trained references
 
-For this experiment we use R11–R16, a six-annotator cohort selected to improve comparability of the predominantly negative annotation data described in the workflow. This is a practical cohort choice, not proof that these six annotators are iid draws from the theoretical population or that their item distributions are identical.
+For this experiment we use radiologists R11–R16, a group of six annotators selected to improve the comparability of their predominantly negative annotations. This is a practical cohort choice, not proof that these six annotators are IID draws from the theoretical population or that their item distributions are identical.
 
-Each annotator-specific model predicts the same 27-indicator average used in the scalar Task I analysis. The data construction holds out one third of unique image IDs for evaluation, using seed 42, and prepares annotator-specific training and validation sets from the remaining images. With six annotators, excluding A and B leaves at most four references. All reported results below use the corrected `task_II_alt_modified` output.
+Each annotator-specific model predicts the same 27-indicator average used in the scalar experiment of [Part I](#part-1). The data construction holds out one third of unique image IDs for evaluation, using seed 42, and prepares annotator-specific training and validation sets from the remaining images. With six annotators, excluding A and B leaves at most four references.
 
-In this run, the configuration field `prob` is mapped to the theoretical terms as follows: $\alpha_\Delta=\alpha_g=\gamma=\text{prob}/3$. The nominal sum is therefore `prob`, subject to the assumptions of the corresponding procedure. Here a rejection means that the procedure certifies the direction of the comparison; the reported rejection percentages are descriptive frequencies of that decision.
+We split a total error budget `prob` equally, $\alpha_\Delta=\alpha_g=\gamma=\text{prob}/3$, so that the nominal bound in @eq-false-certificate equals `prob` under the procedure's assumptions. A rejection means that the procedure certifies the direction of the comparison; the rejection percentages below are descriptive frequencies of that decision.
 
 Certification is uncommon at the smallest error budget. Across all 330 configurations, the rejection percentage rises from 0.6% at a total error budget of 0.01 to 18.2% at 0.20. At 0.20, the percentages are 10%, 23.3%, and 46.7% with 2, 3, and 4 references. These are descriptive rates over enumerated configurations, which reuse annotators and images. They measure how often the procedure reaches a certification decision, not its accuracy against known ground truth.
 
-::: {#result-continuous-task2 .ab-result}
+::: {#fig-continuous-task2}
 
-::: {.ab-result-title}
-How often does the procedure certify a comparison?
-:::
+::: {#result-continuous-task2 .ab-result}
 
 ::: {.ab-widget data-widget="continuous-heatmap"}
 
@@ -231,9 +229,9 @@ How often does the procedure certify a comparison?
 
 :::
 
-::: {.ab-caption}
-Rejection percentage by number of references (rows) and total error budget (columns).
 :::
+
+How often the procedure certifies a comparison. Rejection percentage by number of references (rows) and total error budget (columns).
 
 :::
 
@@ -247,7 +245,7 @@ Pooled over K, the procedure certifies 2/330, 10/330, 21/330, and 60/330 configu
 
 The number of evaluation images depends on the compared human B: R11 512, R12 549, R13 535, R14 485, R15 551, R16 547.
 
-In the source files, `n_true` and `true_percent` count decisions equal to True, that is, certification decisions. They are not counts of correct certifications or accuracy rates. `B_true` identifies the compared human annotator, not a latent ground truth.
+In the CSV files, `n_true` and `true_percent` count decisions equal to True, that is, certification decisions. They are not counts of correct certifications or accuracy rates. `B_true` identifies the compared human annotator, not a latent ground truth.
 
 [Rejection percentages by K and prob (CSV)](data/task2-scalar/by-k-prob.csv) · [All 1,320 configuration results (CSV)](data/task2-scalar/configurations.csv) · [Run metadata (JSON)](data/task2-scalar/meta.json)
 

@@ -1,6 +1,6 @@
 ---
-title: "Who Judges the Model?"
-subtitle: "Annotation bias, self-reference, and reliable model–human comparisons"
+title: "Is Your Annotator Reliable?"
+subtitle: "Statistical inference for annotation bias and reliability"
 author:
   - "Xuhe Zhang"
   - "Ying Jin"
@@ -13,7 +13,9 @@ format:
   html:
     toc: false
     number-sections: false
-    html-math-method: mathjax
+    html-math-method:
+      method: mathjax
+      url: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg-full.js"
     css: annotation-bias.css
 ---
 
@@ -25,33 +27,44 @@ Xuhe Zhang[^amcs-affil], Ying Jin[^wharton-affil]
 [^wharton-affil]: Wharton, UPenn
 
 ::: {.article-summary}
-A model can study an annotator's systematic tendencies as well as the task. When that annotator also supplies the evaluation reference, the model's apparent advantage over another human can change. We study how to detect this self-reference effect and when an ensemble of annotator-specific models can certify a comparison despite reference distortion.
+THIS IS ARTICLE SUMMARY --- TO BE WRITTEN
 :::
 
 ## Introduction {#introduction}
 
-Human labels enter a model twice: first as a training signal, and later as the standard against which its predictions are judged. These roles are often discussed separately. Their interaction matters when annotators differ systematically.
+Artificial intelligence (AI) models are increasingly being used to assist with or automate tasks that have traditionally relied on human annotation and expert judgment. Examples include interpreting medical images [@aggarwal2021diagnostic], identifying harmful or toxic online content [@gorwa2020algorithmic], and evaluating or ranking generated responses [@ouyang2022training]. For these tasks, human annotations often provide the supervision used to train the models [@prabhakaran2024grasp; @uma2021learning].
 
-Some tasks are explicitly subjective. In hate-speech or emotion annotation, different judgments may reflect different interpretations rather than interchangeable mistakes. Annotation policy helps determine which judgments a system should reproduce [@rottger2022paradigms; @davani2022disagreements]. Human preferences also shape language-model training. InstructGPT, for example, uses human demonstrations and comparisons, while explicitly examining generalization to held-out labelers [@ouyang2022instruction]. In medical image interpretation, an underlying clinical condition may exist even when the available labels do not provide an uncontested reference for it. These settings differ, but they share an evaluation question: **whose judgments define success?**
+However, these tasks are usually subjective, so the labels used to train a model depend on the judgments of the human annotators. For example, annotators may disagree about whether a text contains hate speech or which emotion it expresses [@rottger2022two; @davani2022dealing]. Human preferences also enter language-model training through demonstrations and comparisons between responses, as in InstructGPT [@ouyang2022training]. A related issue arises in medical imaging: radiologists may disagree about findings in the same chest X-ray, so the reference label can depend on which radiologists assess it [@abdalla2023hurdles]. 
+When annotators' judgments leave consistent patterns in the labels they provide, this is commonly referred to as *annotation bias* [@geva2019we; @wich-etal-2020-investigating].
 
-Consider a model trained on annotator A and compared with annotator B. If A also supplies the evaluation labels, close agreement with A is rewarded twice: it is what training encourages, and what evaluation measures. A model can therefore look relatively strong because it has learned A's systematic tendencies. Evaluating against a different annotator C may change that apparent advantage. But replacing A with C does not, by itself, establish that C is the right reference.
+Such systematic bias in annotation can affect the performance comparisons between trained models and human annotators (hereafter *model–human comparisons*). These comparisons have attracted considerable attention in medical imaging [@liu2019comparison; @nagendran2020artificial; @ahmad2023machine]. For example, in chest X-ray interpretation, @irvin2019chexpert reports that its model outperformed individual radiologists on several findings, while @wu2020comparison reports higher specificity and precision for an AI model than for radiology residents. Both studies used reference labels established by panels of specialists through majority voting or consensus. However, the former study did not report whether the training annotators overlapped with the reference experts, while in the latter, one of the reference experts was also involved in training. Now we use a simple model to explain how annotation bias can affect model–human comparisons under this overlap.
 
-Model–human comparisons make this issue concrete. CheXNet reported a higher average F1 score than its radiologist comparison group under its study protocol [@rajpurkar2017chexnet]. Such findings must be interpreted together with the reference and metric used. Our analysis does not re-evaluate CheXNet or attribute the mechanism below to that study; it asks what a reference-dependent comparison can establish in general.
+Denote the label given by an annotator $i$ on object $x$ as $Y_i(x)$ and the corresponding latent truth as $Y^*(x)$, we write
+$$Y_i(x) = Y^*(x) + b_i(x) + \epsilon_{i,x},$$
+where $b_i(x)$ is the systematic bias of annotator $i$ and $\epsilon_{i,x}$ is the noise. Suppose a model $\widehat Y_A$ is trained on annotator A and compared with annotator B. Assume the reference is again the annotator A and the comparison is on dataset $\mathcal{D}$. Then the model–human comparison is between 
+$\sum_{x \in \mathcal{D}} || \widehat Y_A (x) - Y_A (x) ||$ and $\sum_{x \in \mathcal{D}} || Y_B (x) - Y_A (x) ||,$
+which can also be written as
+$$ \sum_{x \in \mathcal{D}} || \widehat e_A (x) - \epsilon_{A,x} || \quad \mathrm{versus} \quad  \sum_{x \in \mathcal{D}} ||\big(b_B(x) - b_A(x)\big) + \epsilon_{B,x} - \epsilon_{A,x}||.$$ {#eq-intro-self-ref}
+Here $\widehat e_A (x)$ captures the approximation error and training error arising from finite samples and incomplete optimization, and the rewrite holds under mild conditions^[Sufficient conditions are that $\mathbb{E}[\epsilon_{A,x}\mid x]=0$ and that MSE is used as the training loss.]. 
+Similarly, when the latent truth is chosen as the reference, we can rewrite the actual model–human comparison, between $\sum_{x \in \mathcal{D}} ||\widehat Y_A (x) - Y^*(x)||$ and $\sum_{x \in \mathcal{D}} ||Y_B (x) - Y^*(x)||$ as
+$$ \sum_{x \in \mathcal{D}} || \widehat e_A (x) + b_A(x) || \quad \mathrm{versus} \quad  \sum_{x \in \mathcal{D}} ||b_B(x) + \epsilon_{B,x} ||.$$ {#eq-intro-latent-ref}
+The comparison in @eq-intro-self-ref may favor the model's performance relative to that in @eq-intro-latent-ref: the bias term $b_A$ cancels from the model $\widehat Y_A$'s error, accumulating to the human annotator $Y_B$'s error.
 
-Here is a deliberately simple example. On one illustrative item, a model predicts 0.75, A reports 0.80, and B and C both report 0.20. Using squared loss gives:
+Aside from the analysis above, previous work has also shown that models can learn systematic tendencies in how individual annotators label data [@binns2017like; @geva2019we; @nichyporuk2022rethinking]. A reported model advantage may therefore reflect, in part, agreement with the reference's annotation patterns. However, several questions remain open, particularly in real-world medical applications:
 
-| Evaluation reference | Model loss | B's loss | Model loss minus B's loss |
-|---|---:|---:|---:|
-| A: 0.80 | 0.0025 | 0.3600 | −0.3575 |
-| C: 0.20 | 0.3025 | 0.0000 | +0.3025 |
+- **To what extent does annotation bias affect model–human comparisons?**
+- **Could accounting for this bias reverse the conclusion?**
+- **How can we identify an annotator whose labels can serve as a reliable reference for such comparisons?**
 
-: Illustrative values, not experimental observations. {#tbl-illustrative-reference}
+To address these questions, we focus on predicting thoracic abnormalities from chest X-rays using the VinDr-CXR dataset [@PhysioNet-vindr-cxr-1.0.0; @nguyen2022vindr], accessed through PhysioNet [@pollard_physionet_2026], which provides independent annotations from multiple radiologists for the same images. We train models on individual radiologists' labels and compare their performance with that of other radiologists under different evaluation references. This setting allows us to examine how the choice of training annotator and evaluation reference affects the conclusions of model–human comparisons.
 
-The predictions did not change; the reference did. The negative gap favors the model under A, while the positive gap favors B under C. This example illustrates a possible reversal, not an observed experimental result and not evidence that either reference is correct.
+The article proceeds in three parts. [Part I](#part-1) formulates annotation bias and develops a statistical test for whether using the training annotator as the evaluation reference favors the model, supported by experiments on VinDr-CXR. In [part II](#part-2), we consider scores obtained by aggregating binary labels across abnormality categories, and develop a statistical test to assess whether a reference annotator is reliable for the model–human performance comparison. [Part III](#part-3) extends the analysis to binary abnormality labels using a Bernoulli formulation.
 
-Previous work has shown that annotator-specific patterns can be learned: Geva et al. found that performance often deteriorated on examples produced by unseen annotators in text datasets [@geva2019annotator]. Multi-annotator models can represent disagreement explicitly [@davani2022disagreements]. Classical approaches instead estimate latent labels and observer errors under specified models [@dawid1979observer; @raykar2010crowds]. Our question is more specific: **does a particular evaluation reference preserve the direction of a particular model–human comparison?**
+<!-- Human labels enter a model twice: first as a training signal, and later as the standard against which its predictions are judged. These roles are often discussed separately. Their interaction matters when annotators differ systematically. -->
 
-The article proceeds in three parts. Part I measures how the comparison changes under self-reference, for both bounded scalar and binary labels. Part II develops a trained-reference procedure in an additive framework. Part III treats binary labels through a logit-bias model, where averaging more references cannot automatically remove every component of distortion. The aim is to make the assumptions behind a comparison visible, and to distinguish a detectable reference effect from a certified conclusion about a latent target.
+
+<!-- Model–human comparisons make this issue concrete. CheXNet reported a higher average F1 score than its radiologist comparison group under its study protocol [@rajpurkar2017chexnet]. Such findings must be interpreted together with the reference and metric used. Our analysis does not re-evaluate CheXNet or attribute the mechanism below to that study; it asks what a reference-dependent comparison can establish in general. -->
+
 
 ::::: {.panel-tabset #research-parts}
 
@@ -71,7 +84,7 @@ The article proceeds in three parts. Part I measures how the comparison changes 
 
 ## Conclusion {#conclusion}
 
-A model–human comparison is also a comparison of how the model and human relate to an evaluation reference. When the model learns one annotator's systematic tendencies, using that annotator as the reference can change its apparent advantage. Task I makes that shift measurable. In the real scalar experiment, four of six configurations show a significant positive self-reference effect, while the two configurations trained on R10 have negative estimated effects. For the 27 binary findings, the across-aspect average shift is positive in all six configurations and significant at nominal α = 0.05 in four, while the average loss gap stays negative under both references.
+A model–human comparison is also a comparison of how the model and human relate to an evaluation reference. When the model learns one annotator's systematic tendencies, using that annotator as the reference can change its apparent advantage. Task I makes that shift measurable. In the real scalar experiment, four of six configurations show a significant positive self-reference effect, while the two configurations trained on R10 have negative estimated effects. For the 27 binary findings, the effect is significant at nominal α = 0.05 in 29 of the 162 finding-level tests, against about 8 expected by chance.
 
 Task II asks a different question: can the reference preserve the direction of the comparison against a specified latent target? The central idea is to compare a lower bound on the strength of the observed gap with an upper bound on reference distortion. Trained annotator models make this approach usable with sparse labeling overlap, while introducing assumptions about their own errors. The continuous procedure is a Gaussian working-model analysis; its observed certification frequency should be read in that light.
 
@@ -85,7 +98,36 @@ The practical lesson is to specify the reference, the comparison target, and the
 :::
 
 ```{=html}
-<script src="article-tabs.js"></script>
-<script src="data/results-data.js"></script>
-<script src="results.js"></script>
+<script src="article-tabs.js?v=2"></script>
+<script src="data/results-data.js?v=2"></script>
+<script src="results.js?v=11"></script>
+<script>
+// Local preview only: reload when the rendered page changes on disk.
+// Quarto's own preview reload does not fire reliably here; this checks the
+// served page once a second and reloads after it has settled on a new version.
+(function () {
+  var host = location.hostname;
+  if (location.protocol !== "http:" || (host !== "localhost" && host !== "127.0.0.1")) return;
+  var baseline = null;
+  var candidate = null;
+  function digest(text) {
+    var h = 0;
+    for (var i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0;
+    return text.length + ":" + h;
+  }
+  function check() {
+    fetch(location.pathname, { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.text() : null; })
+      .then(function (text) {
+        if (text === null) return;
+        var d = digest(text);
+        if (baseline === null || d === baseline) { baseline = baseline || d; candidate = null; return; }
+        if (d === candidate) { location.reload(); } else { candidate = d; }
+      })
+      .catch(function () {})
+      .then(function () { setTimeout(check, 1000); });
+  }
+  setTimeout(check, 1000);
+})();
+</script>
 ```

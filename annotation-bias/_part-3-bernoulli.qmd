@@ -1,8 +1,8 @@
 **Takeaway.** Under a logit-bias model, averaging references reduces random variation but can leave a systematic probability-scale shift. A Bernoulli certificate must allow for both effects.
 
-### Why the additive argument does not transfer unchanged
+### Why the argument of Part II does not transfer unchanged
 
-For one binary aspect, suppress the aspect index and write
+For one binary label, suppress its index and write
 
 $$
 Y_r\mid X,r\sim\operatorname{Bernoulli}(\mu_r(X)),
@@ -19,18 +19,18 @@ $$
 \quad\text{need not equal}\quad\mu^*(x).
 $$
 
-An arbitrarily large probability-averaging panel can therefore converge to a value different from the latent target. In this model, $\operatorname{logit}\mu^*(x)$ is the population-average logit; this is a different centering convention from the additive model in Part II.
+An arbitrarily large probability-averaging panel can therefore converge to a value different from the latent target. In this model, $\operatorname{logit}\mu^*(x)$ is the population-average logit; this is a different centering convention from Parts [I](#part-1) and [II](#part-2), where $\mu^*$ is the population-average probability.
 
-The observed loss gap, the distortion identity, and the signal bound $L_\Delta$ remain the same. What changes is the bound for reference distortion.
+The loss gap, the distortion identity @eq-reference-distortion, and the lower bound $L_\Delta$ from [Part II](#part-2) remain the same. What changes is the bound for reference distortion.
 
 ### Separate average logit offsets from item-dependent variation
 
-The reference identities, including their entire bias functions $b_r(\cdot)$, are iid draws independent of A, B, and the fit of $p_A$. The reference-panel analysis conditions on $p_A$ and B. Independent average offsets alone would not be enough: shared item-dependent bias components could still make the reference effects dependent.
+We assume that the reference annotators, together with their entire bias functions $b_r(\cdot)$, are IID draws, independent of A, B, and the fitted model $\widehat\mu_A$; the analysis of the reference panel conditions on $\widehat\mu_A$ and B. Independent average offsets alone would not be enough: shared item-dependent bias components could still make the reference effects dependent.
 
 Let
 
 $$
-C_r=\mathbb E_X b_r(X),\qquad C_r\overset{\mathrm{iid}}\sim N(0,\tau^2).
+C_r=\mathbb E_X b_r(X),\qquad C_r\overset{\mathrm{IID}}\sim N(0,\tau^2).
 $$
 
 Allow bias to vary across items, but bound its average variation by
@@ -42,10 +42,10 @@ $$ {#eq-kappa-assumption}
 
 Thus $\mathbb E_X\mathbb E_r b_r(X)^2\leq\kappa\tau^2$. The parameter $\tau$ measures between-annotator average logit offsets; $\kappa$ limits additional item-dependent variation. The Gaussian law is now imposed on unbounded logit offsets, not on bounded probability-scale distortion terms.
 
-For trained references, write $\widehat\mu_r=\mu_r+h_r$ on the **probability scale**. Under the error moment in @eq-reference-orthogonality, the aggregate surrogate-error contribution vanishes, and the relevant reference effects are
+For trained references, write $\widehat\mu_r=\mu_r+\widehat e_r$ on the **probability scale**. Under the error moment in @eq-reference-orthogonality, the aggregate surrogate-error contribution vanishes, and the relevant reference effects are
 
 $$
-g_r=\mathbb E_X[(\mu_r(X)-\mu^*(X))(p_A(X)-\mu_B(X))],
+g_r=\mathbb E_X[(\mu_r(X)-\mu^*(X))(\widehat\mu_A(X)-\mu_B(X))],
 \qquad
 g_{\widehat{\mathcal R}}=\frac1K\sum_r g_r.
 $$
@@ -119,7 +119,7 @@ W_{i,r}=\operatorname{logit}\widehat\mu_r(X_i)
 \qquad r=2,\ldots,K.
 $$
 
-The same covariance structure $I+\mathbf1\mathbf1^\top$ and chi-square inversion in @eq-scale-calibration produce $U_\tau$. Unlike continuous weighted calibration, these contrasts are not multiplied by $p_A-Y_B$. Unlike temperature scaling, this step does not fit a scalar temperature to label prediction loss.
+The same covariance structure $I+\mathbf1\mathbf1^\top$ and chi-square inversion in @eq-scale-calibration produce $U_\tau$. Unlike the calibration in [Part II](#part-2), these contrasts are not multiplied by $\widehat\mu_A-Y_B$. Unlike temperature scaling, this step does not fit a scalar temperature to label prediction loss.
 
 The calibration needs accurate out-of-sample logit contrasts. Predictions must lie strictly between zero and one; the item covariance must be estimable; and the signed mean first-stage logit-contrast error must be negligible at the calibration uncertainty scale, or its uncertainty must be accounted for. Probability-scale accuracy alone does not guarantee this near probabilities zero or one. Clipping probabilities also changes the contrasts and must be handled consistently with the calibration assumptions.
 
@@ -133,13 +133,13 @@ $$
 Q(t)=\sum_j\frac{a_j^2}{\lambda_j+t^2}.
 $$
 
-The workflow solves a scalar monotone equation in $u=t^2$ at the lower chi-square quantile and sets $U_\tau=\sqrt u$. The scale is nonnegative; boundary and singular cases must follow explicit solver logic. This computational reduction does not replace the assumptions needed to interpret the resulting endpoint as an upper confidence bound.
+Our implementation solves a scalar monotone equation in $u=t^2$ at the lower chi-square quantile and sets $U_\tau=\sqrt u$. The scale is nonnegative; boundary and singular cases must follow explicit solver logic. This computational reduction does not replace the assumptions needed to interpret the resulting endpoint as an upper confidence bound.
 
 :::
 
 ### Why a controlled binary experiment is useful
 
-The real-data cohorts provide few reference annotators, and many clinical aspects are rare. Those conditions can leave little information for a conservative binary procedure. To inspect its behavior with larger panels and balanced synthetic outcomes, we keep the real image embeddings but generate artificial annotator responses.
+The real data provide few reference annotators per comparison, and many clinical aspects are rare. Those conditions can leave little information for a conservative binary procedure. To inspect its behavior with larger panels and balanced synthetic outcomes, we keep the real image embeddings but generate artificial annotator responses.
 
 This is a **semi-synthetic experiment**: the feature geometry comes from real images, while the latent probabilities, annotator effects, and binary labels are generated. The 27 output aspects are artificial. Even though storage columns reuse clinical label names, the synthetic outcomes should be read as Aspect 1 through Aspect 27, not as simulated clinical diagnoses.
 
@@ -167,7 +167,7 @@ For this generator, $\tau=0.1$ and $\kappa=2$ is a valid analytic population upp
 
 ::: {.callout-note collapse="true" title="Exact generator settings and diagnostics"}
 
-The supplied generation note and workflow specify the following settings:
+The generator uses the following settings:
 
 | Component | Setting |
 |---|---|
@@ -198,7 +198,7 @@ which justifies $\kappa=2$.
 
 The recorded maximum error in solving the population positive-rate constraint is $4.32\times10^{-6}$. The finite-panel expected positive rate is 0.500315 and the realized label rate is 0.500210. The recorded mean latent probability is 0.499999; this is a diagnostic outcome, not the quantity constrained by the intercept equation. Empirical finite-panel bias ratios range from 1.2387 to 1.3108, with mean 1.2730; these diagnostics do not replace the analytic population bound.
 
-The distribution of X used for generator centering and oracle moments is uniform over the full fixed pool. PCA is also fitted on that pool. This is a fixed-pool simulation, not an evaluation of an inductively learned feature transformation on unseen images. The inherited disjoint $D_1$ and $D_2$ subsets are an experimental analogue of the item-sampling theory; they do not by themselves establish its iid assumptions.
+The distribution of X used for generator centering and oracle moments is uniform over the full fixed pool. PCA is also fitted on that pool. This is a fixed-pool simulation, not an evaluation of an inductively learned feature transformation on unseen images. The inherited disjoint $D_1$ and $D_2$ subsets are an experimental analogue of the item-sampling theory; they do not by themselves establish its IID assumptions.
 
 :::
 
@@ -206,11 +206,9 @@ The distribution of X used for generator centering and oracle moments is uniform
 
 In the synthetic Bernoulli experiment, the reported rejection percentages vary sharply with the number of references and the probability setting. At prob = 0.10, the average across 27 aspects is 0% with 16 references, 18.8% with 24, and 100% with 32. The intermediate panel size is especially revealing: with 24 references the average rises from 0.2% at prob = 0.05 to 91% at prob = 0.20. Use the controls below to see how this pattern varies by finding.
 
-::: {#result-synthetic-bernoulli-task2 .ab-result}
+::: {#fig-synthetic-bernoulli-task2}
 
-::: {.ab-result-title}
-More references, more opportunities to certify
-:::
+::: {#result-synthetic-bernoulli-task2 .ab-result}
 
 ::: {.ab-widget data-widget="synthetic-task2"}
 
@@ -226,11 +224,15 @@ Average rejection percentage across 27 aspects. Each aspect contributes 120 tria
 
 :::
 
+How certification depends on the size of the reference panel. Average rejection percentage across the 27 aspects, by number of references. Each aspect contributes 120 trial decisions per panel size and prob setting; trial configurations are shared across aspects.
+
+:::
+
 [Explore Lung Opacity](#result-synthetic-bernoulli-task2){.ab-instance-link data-target="synthetic-task2" data-aspect="Lung Opacity"}
 
 The across-aspect average also hides heterogeneity. For Lung Opacity at prob = 0.10, the rejection percentage is 0% with both 16 and 24 references, while it is 100% with 32. At prob = 0.20, the percentage with 24 references reaches 98.3% (118/120).
 
-Each panel size and prob setting summarizes 120 trial configurations. These configurations reuse the same generated annotator panel, trained models, and image pool; they are not 120 independently regenerated datasets. `prob` is the reported implementation setting. Unlike Part II, the supplied synthetic summary does not record how it is split across the three error terms, so we do not assign it a total-error interpretation.
+Each panel size and prob setting summarizes 120 trial configurations. These configurations reuse the same generated annotator panel, trained models, and image pool; they are not 120 independently regenerated datasets. `prob` is the setting recorded in the implementation. Unlike in [Part II](#part-2), the synthetic result summary does not record how `prob` is split across the three error terms, so we do not interpret it as a total error budget.
 
 ::: {.callout-note collapse="true" title="Compare all 27 aspects"}
 
@@ -254,6 +256,6 @@ Empirical power results based on the known synthetic ground truth will be added 
 
 The construction controls the latent probabilities, the average logit-bias distribution, and a population bound on item-dependent bias variation. This makes it possible to study how the implemented rule behaves when substantially more annotators are available.
 
-The reported results show a strong change in certification frequency with panel size under these settings. They do not, by themselves, estimate the probability of an incorrect certificate. Although the generator makes oracle quantities available in principle, the supplied result summary does not report oracle sign agreement, false-certification rates, or coverage. We therefore do not claim that those properties have been empirically verified.
+The reported results show a strong change in certification frequency with panel size under these settings. They do not, by themselves, estimate the probability of an incorrect certificate. Although the generator makes oracle quantities available in principle, our result summary does not report oracle sign agreement, false-certification rates, or coverage. We therefore do not claim that those properties have been empirically verified.
 
 Nor does a controlled label generator guarantee that trained surrogates satisfy the required error moment or logit-contrast accuracy. The use of the validation split for calibration also needs to be interpreted together with any checkpoint-selection or probability-calibration steps that used that split. Those first-stage conditions remain distinct from the generator's known $\tau$ and $\kappa$.

@@ -75,6 +75,14 @@ h3, h4 {
   text-transform: none;
 }
 
+/* Subsections inside a Part (e.g. under I.1 / I.2) */
+h4 {
+  color: var(--article-ink);
+  font-weight: 700;
+  font-size: 1.15rem;
+  margin-top: 1.8em;
+}
+
 /* Part tabset */
 .panel-tabset > .nav-tabs {
   border-bottom: 1px solid var(--article-line);
@@ -121,7 +129,7 @@ a:focus {
 
 table caption,
 .table-caption {
-  font-size: 15px;
+  font-size: 17px;
   color: var(--article-muted);
 }
 
@@ -162,10 +170,17 @@ table caption,
   margin: 0 0 0.6em;
 }
 
-.ab-detail,
 .ab-caption {
-  font-size: 16px;
+  font-size: 17px;
   color: var(--article-muted);
+  margin: 0.5em 0 0;
+}
+
+/* Interaction hint / live detail under a widget: set apart from the caption */
+.ab-detail {
+  font-size: 16px;
+  font-style: italic;
+  color: var(--article-accent);
   margin: 0.5em 0 0;
 }
 
@@ -290,6 +305,12 @@ table caption,
   background: #eef0f2;
 }
 
+/* Same size for every p-value cell, also when it has a single line (≈ 1) */
+.ab-matrix td.ab-matrix-cell {
+  height: 4.1em;
+  vertical-align: middle;
+}
+
 .ab-matrix td.is-detected {
   background: #cfe0f1;
 }
@@ -339,6 +360,71 @@ table caption,
 .ab-swatch.is-detected {
   border-color: #b3cbe3;
   background: #cfe0f1;
+}
+
+/* Figure 3: who performs better under each reference */
+.ab-swatch.is-model,
+.ab-verdict td.is-model {
+  border-color: #a9d3c4;
+  background: #d5ece4;
+}
+
+.ab-swatch.is-human,
+.ab-verdict td.is-human {
+  border-color: #e8c8a8;
+  background: #f6e2cf;
+}
+
+.ab-verdict {
+  border-collapse: separate;
+  border-spacing: 4px;
+  margin: 0.4em auto 0.2em;
+  font-size: 16px;
+}
+
+.ab-verdict thead th {
+  font-weight: 400;
+  color: var(--article-muted);
+  text-align: center;
+  padding: 0.2em 0.7em;
+  white-space: nowrap;
+}
+
+.ab-verdict tbody th {
+  font-weight: 400;
+  text-align: left;
+  padding: 0.3em 0.7em 0.3em 0;
+  white-space: nowrap;
+}
+
+.ab-verdict-main,
+.ab-verdict-sub {
+  display: block;
+}
+
+.ab-verdict-sub {
+  font-size: 14px;
+  color: var(--article-muted);
+}
+
+.ab-verdict td {
+  padding: 0.5em 0.9em;
+  border-radius: 4px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.ab-verdict td.ab-verdict-flag {
+  color: var(--article-muted);
+}
+
+.ab-verdict td.ab-verdict-flag.is-reversed {
+  color: var(--article-accent);
+  font-weight: 700;
+}
+
+.ab-verdict tr.is-highlight th .ab-verdict-main {
+  font-weight: 700;
 }
 
 .ab-short {
@@ -794,8 +880,9 @@ button.ab-heat-cell {
 
 /* Figure captions */
 figcaption,
-.figure-caption {
-  font-size: 14px;
+.figure-caption,
+.quarto-float-caption {
+  font-size: 17px;
   color: var(--article-muted);
 }
 
@@ -831,6 +918,13 @@ mjx-container[display="true"] {
    margins and keep only the normal paragraph spacing. */
 body .math.display > mjx-container.MathJax {
   margin: 0;
+}
+
+/* Display equations written inside a running paragraph (no blank lines
+   around the $$) get no paragraph spacing, so give them a little room. */
+p > .math.display:not(:only-child) > mjx-container.MathJax,
+p > span[id^="eq-"]:not(:only-child) > .math.display > mjx-container.MathJax {
+  margin: 0.5em 0;
 }
 
 @media (max-width: 767.98px) {

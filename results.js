@@ -3,6 +3,30 @@
 // data/extract_from_dump.py) and replaces each static fallback in a
 // `.ab-widget[data-widget=...]` container with its interactive version.
 // Display values are rounded here; every decision comes from the unrounded data.
+
+// Citation groups such as [@a; @b] share one `data-cites="a b"` parent, and
+// Quarto's hover card lists every key of that parent. Give each link its own
+// single-key parent (before Quarto builds the cards on DOMContentLoaded) so
+// hovering one reference shows only that reference.
+(function () {
+  document.querySelectorAll('.citation[data-cites*=" "] a[role="doc-biblioref"]').forEach(function (link) {
+    var href = link.getAttribute("href") || "";
+    if (href.indexOf("#ref-") !== 0) return;
+    var own = document.createElement("span");
+    own.setAttribute("data-cites", href.slice(5));
+    link.parentNode.insertBefore(own, link);
+    own.appendChild(link);
+  });
+})();
+
+// References to figures ("Figure 2") just jump to the figure: drop the class
+// Quarto uses to attach a hover preview, before it builds the previews.
+(function () {
+  document.querySelectorAll('a.quarto-xref[href^="#fig-"]').forEach(function (link) {
+    link.classList.remove("quarto-xref");
+  });
+})();
+
 (function () {
   "use strict";
 
@@ -42,23 +66,31 @@
     return minus(m) + " × 10" + supExp(e);
   }
 
-  // p-values: small ones in scientific notation, ones close to 1 with enough
-  // digits that they do not collapse to 1, otherwise three significant digits.
+  // p-values: small ones in scientific notation, ones very close to 1 as "≈ 1",
+  // otherwise three significant digits.
   function fmtP(p) {
     if (p === null || p === undefined) return "Not available";
     if (p < 0.001) return sci(p);
-    if (p > 0.99) {
-      for (var d = 6; d < 12; d++) {
-        var s = p.toFixed(d);
-        if (s !== (1).toFixed(d)) return s;
-      }
-      return "1";
-    }
+    if (p > 0.999) return "≈ 1";
     return p.toPrecision(3);
+  }
+
+  var CLEAR_HINT = " Select the cell again to clear.";
+
+  // "p = 0.0123" or "p ≈ 1"
+  function pEquals(p) {
+    var s = fmtP(p);
+    return s.charAt(0) === "≈" ? "p " + s : "p = " + s;
   }
 
   function thresholdText(p, alpha) {
     return p < alpha ? "p < " + alpha.toFixed(2) : "p ≥ " + alpha.toFixed(2);
+  }
+
+  // The "(p < α)" line under a significant p-value; omitted otherwise
+  // (the cell keeps its height through CSS and the value is centred vertically).
+  function thresholdSpan(p, alpha) {
+    return p < alpha ? h("span", { class: "ab-matrix-thr", text: "(" + thresholdText(p, alpha) + ")" }) : null;
   }
 
   function fmtPct(x) {
@@ -252,7 +284,7 @@
           "aria-label": describeCell(r, alpha, alphaKey),
         }, [
           h("span", { class: "ab-matrix-p", text: fmtP(r.p) }),
-          h("span", { class: "ab-matrix-thr", text: "(" + thresholdText(r.p, alpha) + ")" }),
+          thresholdSpan(r.p, alpha),
         ]);
         makeSelectable(td, function () { onSelect(key); });
         return td;
@@ -276,7 +308,7 @@
             ]),
             h("span", { class: "ab-matrix-item-p" }, [
               h("span", { class: "ab-matrix-p", text: fmtP(r.p) }),
-              h("span", { class: "ab-matrix-thr", text: "(" + thresholdText(r.p, alpha) + ")" }),
+              thresholdSpan(r.p, alpha),
             ]),
           ]);
           makeSelectable(item, function () { onSelect(key); });
@@ -288,15 +320,15 @@
   }
 
   function describeCell(r, alpha, alphaKey) {
-    return r.A + "-trained model vs human " + r.B + ", external reference " + r.C + ": p = " + fmtP(r.p) +
-      " (" + thresholdText(r.p, alpha) + "), positive self-reference effect " + (r.reject[alphaKey] ? "detected." : "not detected.");
+    return r.A + "-trained model vs human " + r.B + ", external reference " + r.C + ": " + pEquals(r.p) +
+      (r.p > 0.999 ? "" : " (" + thresholdText(r.p, alpha) + ")") +
+      ", positive self-reference effect " + (r.reject[alphaKey] ? "detected." : "not detected.");
   }
 
   function matrixLegend() {
     return h("div", { class: "ab-matrix-legend" }, [
       h("span", null, [h("span", { class: "ab-swatch is-detected", "aria-hidden": "true" }), "Positive effect detected"]),
       h("span", null, [h("span", { class: "ab-swatch", "aria-hidden": "true" }), "Not detected"]),
-      h("span", { class: "ab-matrix-legend-note", text: "Colour shows the test decision, not the size of the effect." }),
     ]);
   }
 
@@ -307,9 +339,9 @@
 
     function render() {
       tableHost.innerHTML = "";
-      tableHost.appendChild(buildMatrix(D.scalar, 0.05, "0.05", state, function (key) { state.selected = key; render(); }));
+      tableHost.appendChild(buildMatrix(D.scalar, 0.01, "0.01", state, function (key) { state.selected = state.selected === key ? null : key; render(); }));
       var sel = D.scalar.filter(function (r) { return r.A + "|" + r.B + "|" + r.C === state.selected; })[0];
-      detail.textContent = sel ? describeCell(sel, 0.05, "0.05") : "Select a cell to see which radiologist served as the external reference.";
+      detail.textContent = sel ? describeCell(sel, 0.01, "0.01") + CLEAR_HINT : "Select a cell to see which radiologist served as the external reference.";
     }
 
     container.innerHTML = "";
@@ -324,16 +356,18 @@
   function initBernoulli(container, changeHost) {
     var data = D.bernoulli;
     var alphas = [{ value: "0.01", label: "0.01" }, { value: "0.05", label: "0.05" }, { value: "0.1", label: "0.10" }];
-    var state = { aspect: "-1", alpha: "0.05", selected: null, highlight: null };
+    // Individual findings only (the across-finding average, index -1, is not shown); start on Atelectasis.
+    var findings = data.aspects.filter(function (a) { return a.index !== -1; });
+    var start = findings.filter(function (a) { return a.name === "Atelectasis"; })[0] || findings[0];
+    var state = { aspect: String(start.index), alpha: "0.05", selected: null, highlight: null };
 
     function aspectName() {
-      var a = data.aspects.filter(function (x) { return String(x.index) === state.aspect; })[0];
-      if (!a) return "";
-      return a.index === -1 ? "Average across 27 findings" : a.name;
+      var a = findings.filter(function (x) { return String(x.index) === state.aspect; })[0];
+      return a ? a.name : "";
     }
 
     var aspectField = selectField("Finding",
-      data.aspects.map(function (a) { return { value: String(a.index), label: a.index === -1 ? "Average across 27 findings" : a.name }; }),
+      findings.map(function (a) { return { value: String(a.index), label: a.name }; }),
       state.aspect,
       function (v) { state.aspect = v; state.highlight = null; state.selected = null; render(); });
     var alphaField = segmentedField("Threshold", alphas, state.alpha,
@@ -359,17 +393,13 @@
       var alpha = parseFloat(state.alpha);
 
       var detected = rows.filter(function (r) { return r.reject[state.alpha]; }).length;
-      var perModel = RADIOLOGISTS.map(function (a) {
-        var n = rows.filter(function (r) { return r.A === a && r.reject[state.alpha]; }).length;
-        return a + "-trained model: " + countWord(n);
-      });
       lead.textContent = aspectName() + ": positive self-reference effects are detected in " + detected + " of 6 comparisons at threshold " +
-        alpha.toFixed(2) + " (" + perModel.join("; ") + ").";
+        alpha.toFixed(2) + ".";
 
       tableHost.innerHTML = "";
-      tableHost.appendChild(buildMatrix(rows, alpha, state.alpha, state, function (key) { state.selected = key; render(); }));
+      tableHost.appendChild(buildMatrix(rows, alpha, state.alpha, state, function (key) { state.selected = state.selected === key ? null : key; render(); }));
       var sel = rows.filter(function (r) { return r.A + "|" + r.B + "|" + r.C === state.selected; })[0];
-      detail.textContent = sel ? describeCell(sel, alpha, state.alpha) : "Select a cell to see which radiologist served as the external reference.";
+      detail.textContent = sel ? describeCell(sel, alpha, state.alpha) + CLEAR_HINT : "Select a cell to see which radiologist served as the external reference.";
 
       if (chart) chart.render(rows, aspectName(), state.highlight);
     }
@@ -379,7 +409,7 @@
     return {
       set: function (opts) {
         if (opts.aspect) {
-          var a = data.aspects.filter(function (x) { return x.name === opts.aspect; })[0];
+          var a = findings.filter(function (x) { return x.name === opts.aspect; })[0];
           if (a) state.aspect = String(a.index);
         }
         if (opts.alpha) state.alpha = opts.alpha;
@@ -390,82 +420,53 @@
     };
   }
 
+  // Figure 3: for each comparison, who has the lower Brier score under each
+  // reference (dSelf = model minus human when judged by the training
+  // radiologist, dExt = the same when judged by the external radiologist).
   function initChangeChart(container) {
     var lead = h("p", { class: "ab-lead", "aria-live": "polite" });
-    var legend = h("div", { class: "ab-legend" }, [
-      h("span", null, [h("span", { class: "ab-pt ab-pt-self ab-pt-static", "aria-hidden": "true" }), " Judged by the radiologist who trained the model"]),
-      h("span", null, [h("span", { class: "ab-pt ab-pt-ext ab-pt-static", "aria-hidden": "true" }), " Judged by the external radiologist"]),
+    var legend = h("div", { class: "ab-matrix-legend" }, [
+      h("span", null, [h("span", { class: "ab-swatch is-model", "aria-hidden": "true" }), "Model better"]),
+      h("span", null, [h("span", { class: "ab-swatch is-human", "aria-hidden": "true" }), "Human better"]),
     ]);
-    var headHost = h("div", { class: "ab-dot-row ab-dot-head" });
-    var rowsHost = h("div", { class: "ab-dot-rows" });
-    var ticksHost = h("div", { class: "ab-dot-row ab-dot-axis", "aria-hidden": "true" });
-    var axisLabelHost = h("div", { class: "ab-dot-row ab-dot-axis" });
+    var tableHost = h("div", { class: "ab-scroll" });
 
     container.innerHTML = "";
     container.appendChild(lead);
     container.appendChild(legend);
-    container.appendChild(headHost);
-    container.appendChild(rowsHost);
-    container.appendChild(ticksHost);
-    container.appendChild(axisLabelHost);
+    container.appendChild(tableHost);
+
+    function verdictCell(d) {
+      var model = d < 0;
+      var text = (model ? "Model" : "Human") + " better by " + sigN(Math.abs(d), 2);
+      return h("td", { class: "ab-verdict-cell " + (model ? "is-model" : "is-human"), text: text });
+    }
 
     function render(rows, name, highlight) {
-      var e = groupExp(rows.reduce(function (acc, r) { return acc.concat([r.dSelf, r.dExt]); }, []));
-      var k = Math.pow(10, e);
-      var unit = unitLabel(e);
-      function sc(v) { return v / k; }
-
       var reversals = rows.filter(function (r) { return (r.dSelf < 0) !== (r.dExt < 0); }).length;
-      lead.textContent = name + ": the observed model–human ranking reverses in " + reversals + " of 6 comparisons when the reference changes.";
+      lead.textContent = name + ": the better performer changes in " + reversals + " of 6 comparisons when the external radiologist replaces the training radiologist as the reference.";
 
-      var values = [0];
-      rows.forEach(function (r) { values.push(sc(r.dSelf), sc(r.dExt)); });
-      var lo = Math.min.apply(null, values);
-      var hi = Math.max.apply(null, values);
-      var pad = (hi - lo) * 0.06 || 1;
-      var scale = niceTicks(lo - pad, hi + pad, 5);
-      function pos(v) { return ((v - scale.lo) / (scale.hi - scale.lo)) * 100; }
-      var zero = pos(0);
-
-      headHost.innerHTML = "";
-      headHost.appendChild(h("div", { class: "ab-dot-label" }));
-      headHost.appendChild(h("div", { class: "ab-dot-sides" }, [
-        h("span", null, [h("span", { class: "ab-long", text: "← model has lower loss" }), h("span", { class: "ab-short", text: "← model better" })]),
-        h("span", null, [h("span", { class: "ab-long", text: "human has lower loss →" }), h("span", { class: "ab-short", text: "human better →" })]),
-      ]));
-
-      rowsHost.innerHTML = "";
-      rows.forEach(function (r) {
+      var head = h("thead", null, [h("tr", null, [
+        h("th", { scope: "col", text: "Comparison" }),
+        h("th", { scope: "col" }, [h("span", { class: "ab-long", text: "Judged by the training radiologist" }), h("span", { class: "ab-short", text: "Training ref." })]),
+        h("th", { scope: "col" }, [h("span", { class: "ab-long", text: "Judged by the external radiologist" }), h("span", { class: "ab-short", text: "External ref." })]),
+        h("th", { scope: "col", text: "Better performer" }),
+      ])]);
+      var body = h("tbody", null, rows.map(function (r) {
         var key = r.A + "|" + r.B + "|" + r.C;
-        var a = pos(sc(r.dSelf));
-        var c = pos(sc(r.dExt));
-        var desc = r.A + "-trained model vs " + r.B + ": judged by " + r.A + " " + sigN(sc(r.dSelf), 3) + ", judged by " + r.C + " " +
-          sigN(sc(r.dExt), 3) + (unit ? " (" + unit + ")" : "");
-        rowsHost.appendChild(h("div", { class: "ab-dot-row" + (highlight === key ? " is-highlight" : ""), title: desc, "aria-label": desc }, [
-          h("div", { class: "ab-dot-label" }, [
-            h("span", { class: "ab-dot-main", text: r.A + "-trained model vs " + r.B }),
-            h("span", { class: "ab-dot-sub", text: "external reference: " + r.C }),
+        var reversed = (r.dSelf < 0) !== (r.dExt < 0);
+        return h("tr", { class: (highlight === key ? "is-highlight" : null) }, [
+          h("th", { scope: "row" }, [
+            h("span", { class: "ab-verdict-main", text: r.A + "-trained model vs " + r.B }),
+            h("span", { class: "ab-verdict-sub", text: "references: " + r.A + " → " + r.C }),
           ]),
-          h("div", { class: "ab-dot-track" }, [
-            h("span", { class: "ab-zero", style: "left:" + zero + "%" }),
-            h("span", { class: "ab-link", style: "left:" + Math.min(a, c) + "%;width:" + Math.abs(c - a) + "%" }),
-            h("span", { class: "ab-pt ab-pt-self", style: "left:" + a + "%" }),
-            h("span", { class: "ab-pt ab-pt-ext", style: "left:" + c + "%" }),
-          ]),
-        ]));
-      });
-
-      ticksHost.innerHTML = "";
-      var ticks = h("div", { class: "ab-dot-track ab-ticks" });
-      scale.ticks.forEach(function (t) {
-        ticks.appendChild(h("span", { class: "ab-tick", style: "left:" + pos(t) + "%", text: tickLabel(t, scale.step) }));
-      });
-      ticksHost.appendChild(h("div", { class: "ab-dot-label" }));
-      ticksHost.appendChild(ticks);
-
-      axisLabelHost.innerHTML = "";
-      axisLabelHost.appendChild(h("div", { class: "ab-dot-label" }));
-      axisLabelHost.appendChild(h("div", { class: "ab-axis-caption", text: "Model loss minus human loss" + (unit ? " (" + unit + ")" : "") }));
+          verdictCell(r.dSelf),
+          verdictCell(r.dExt),
+          h("td", { class: "ab-verdict-flag" + (reversed ? " is-reversed" : ""), text: reversed ? "Reversed" : "Unchanged" }),
+        ]);
+      }));
+      tableHost.innerHTML = "";
+      tableHost.appendChild(h("table", { class: "ab-verdict" }, [head, body]));
     }
 
     return { render: render };
@@ -510,7 +511,7 @@
             "aria-pressed": selected === key ? "true" : "false",
             text: fmtPct(g.pct),
           });
-          btn.addEventListener("click", function () { selected = key; render(); });
+          btn.addEventListener("click", function () { selected = selected === key ? null : key; render(); });
           return h("td", null, [btn]);
         })));
       }));
@@ -518,7 +519,7 @@
       tableHost.appendChild(h("table", { class: "ab-heatmap" }, [head, body]));
       if (selected) {
         var parts = selected.split("|");
-        detail.textContent = describe(cellFor(parseInt(parts[0], 10), parts[1]));
+        detail.textContent = describe(cellFor(parseInt(parts[0], 10), parts[1])) + CLEAR_HINT;
       } else {
         detail.textContent = "Select a cell to see its count.";
       }

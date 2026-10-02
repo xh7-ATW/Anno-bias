@@ -1,0 +1,27 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Blog: fixed localhost (http://localhost:8765/annotation-bias.html)",
+      "type": "process",
+      "command": "C:\\Users\\26966\\Anaconda\\python.exe",
+      "args": ["-m", "http.server", "8765", "--bind", "127.0.0.1"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "silent", "panel": "dedicated" },
+      "runOptions": { "runOn": "folderOpen" }
+    },
+    {
+      "label": "Blog: re-render when a Part file is saved",
+      "type": "process",
+      "command": "C:\\Users\\26966\\Anaconda\\python.exe",
+      "args": ["-u", "${workspaceFolder}\\.vscode\\watch-parts.py"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "silent", "panel": "dedicated" },
+      "runOptions": { "runOn": "folderOpen" }
+    }
+  ]
+}
