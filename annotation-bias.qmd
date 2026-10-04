@@ -68,15 +68,15 @@ The article proceeds in three parts. [Part I](#part-1) formulates annotation bia
 
 ::::: {.panel-tabset #research-parts}
 
-## I · Self-reference {#part-1}
+## Part I · Self-reference {#part-1}
 
 {{< include annotation-bias/_part-1-self-reference.qmd >}}
 
-## II · Continuous {#part-2}
+## Part II · Continuous {#part-2}
 
 {{< include annotation-bias/_part-2-continuous.qmd >}}
 
-## III · Bernoulli {#part-3}
+## Part III · Bernoulli {#part-3}
 
 {{< include annotation-bias/_part-3-bernoulli.qmd >}}
 
@@ -86,7 +86,7 @@ The article proceeds in three parts. [Part I](#part-1) formulates annotation bia
 
 A model–human comparison is also a comparison of how the model and human relate to an evaluation reference. When the model learns one annotator's systematic tendencies, using that annotator as the reference can change its apparent advantage. Task I makes that shift measurable. In the real scalar experiment, four of six configurations show a significant positive self-reference effect, while the two configurations trained on R10 have negative estimated effects. For the 27 binary findings, the effect is significant at nominal α = 0.05 in 29 of the 162 finding-level tests, against about 8 expected by chance.
 
-Task II asks a different question: can the reference preserve the direction of the comparison against a specified latent target? The central idea is to compare a lower bound on the strength of the observed gap with an upper bound on reference distortion. Trained annotator models make this approach usable with sparse labeling overlap, while introducing assumptions about their own errors. The continuous procedure is a Gaussian working-model analysis; its observed certification frequency should be read in that light.
+Task II asks a different question: can the reference preserve the direction of the comparison against a specified latent target? The central idea is to compare a lower bound on the strength of the observed gap with an upper bound on the change caused by replacing the latent target with the reference. Trained annotator models make this approach usable with sparse labeling overlap, while introducing assumptions about their own errors. The continuous procedure is a Gaussian working-model analysis; its observed certification frequency should be read in that light.
 
 Binary labels reveal why averaging alone is not enough. Centering annotator biases on the logit scale need not center their probabilities. Larger panels reduce random fluctuations, but a curvature-related component remains in the bound. The semi-synthetic results show how additional references can nevertheless make the certification rule substantially less restrictive in the evaluated settings.
 
@@ -100,7 +100,7 @@ The practical lesson is to specify the reference, the comparison target, and the
 ```{=html}
 <script src="article-tabs.js?v=2"></script>
 <script src="data/results-data.js?v=2"></script>
-<script src="results.js?v=11"></script>
+<script src="results.js?v=21"></script>
 <script>
 // Local preview only: reload when the rendered page changes on disk.
 // Quarto's own preview reload does not fire reliably here; this checks the
@@ -110,6 +110,31 @@ The practical lesson is to specify the reference, the comparison target, and the
   if (location.protocol !== "http:" || (host !== "localhost" && host !== "127.0.0.1")) return;
   var baseline = null;
   var candidate = null;
+  var KEY = "ab-preview-state";
+
+  // Remember the open Part and the scroll position across a preview reload.
+  function activeTab() {
+    var panes = document.querySelectorAll("#research-parts > .tab-content > .tab-pane");
+    for (var i = 0; i < panes.length; i++) if (panes[i].classList.contains("active")) return i;
+    return 0;
+  }
+  function saveAndReload() {
+    try { sessionStorage.setItem(KEY, JSON.stringify({ tab: activeTab(), y: window.pageYOffset })); } catch (e) {}
+    location.reload();
+  }
+  var saved = null;
+  try { saved = JSON.parse(sessionStorage.getItem(KEY) || "null"); sessionStorage.removeItem(KEY); } catch (e) {}
+  if (saved) {
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+    window.addEventListener("load", function () {
+      var btn = document.querySelectorAll('#research-parts > ul.nav-tabs [data-bs-toggle="tab"]')[saved.tab];
+      if (btn && window.bootstrap && window.bootstrap.Tab) window.bootstrap.Tab.getOrCreateInstance(btn).show();
+      function restore() { window.scrollTo(0, saved.y); }
+      restore();
+      [100, 500, 1200].forEach(function (t) { setTimeout(restore, t); });
+    });
+  }
+
   function digest(text) {
     var h = 0;
     for (var i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0;
@@ -122,7 +147,7 @@ The practical lesson is to specify the reference, the comparison target, and the
         if (text === null) return;
         var d = digest(text);
         if (baseline === null || d === baseline) { baseline = baseline || d; candidate = null; return; }
-        if (d === candidate) { location.reload(); } else { candidate = d; }
+        if (d === candidate) { saveAndReload(); } else { candidate = d; }
       })
       .catch(function () {})
       .then(function () { setTimeout(check, 1000); });

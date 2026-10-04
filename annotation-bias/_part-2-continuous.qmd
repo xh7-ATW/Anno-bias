@@ -1,219 +1,252 @@
-**Takeaway.** A reference can be useful without being perfect. For a particular model–human comparison, the question is whether the observed gap is large enough to withstand the reference's remaining distortion and statistical uncertainty.
+**Takeaway.** A panel of reference annotators is reliable for a model–human comparison if it reaches the same conclusion as the latent target. We develop a test that identifies reliable panels without observing the latent target and controls the probability of a false certification, and we apply it to real chest X-ray annotations from VinDr-CXR.
 
-### Why use annotator-specific models as references?
+In this part, we consider the aggregate-score setting of [I.1](#aggregate-score): each radiologist's 27 binary labels on an image are averaged into one score, modeled as a continuous variable in $[0,1]$, on which the models are trained and the model–human comparisons are made. [Part III](#part-3) considers the binary labels of [I.2](#binary-labels).
 
-[Part I](#part-1) showed that the training annotator is not a neutral reference. A natural alternative is the average of several other annotators. Label-aggregation methods have long used models of observer error to learn from noisy judgments [@dawid1979maximum; @raykar2010learning]. Here we use aggregation for a narrower purpose: to test whether a reference gives a model–human comparison the same direction as the latent target would.
+### Which reference can be reliable?
 
-A practical obstacle is sparse overlap. In the independent-label portion of VinDr-CXR, an image generally has three annotations, not labels from every member of a larger panel. We therefore train an annotator-specific predictor $\widehat\mu_r$ from each reference annotator's available data and evaluate those predictors on common images. For a reference set $\mathcal R$ of size K, excluding A and B, define
+[Part I](#part-1) shows that the training annotator is not a neutral reference for model–human comparison. A natural replacement is an independent annotator C, but C has a bias $b_C$ of its own, which also enters the comparison. Then when can an independent annotator serve as a neutral reference? Alternatively, one can construct the reference from the labels of several annotators [@warfield2004simultaneous; @irvin2019chexpert], but how many annotators are enough? Both questions ask when a (set of) reference annotator(s) is reliable. In this part, we develop a statistical test of whether an evaluation reference is reliable for a given model–human comparison, that is, whether it leads to the same conclusion as the latent target.
+
+### Challenges from sparse labels
+
+A reference built from several annotators requires their scores on the same evaluation images. In practice, however, this is often expensive or unavailable. In VinDr-CXR, for example, each training image is labeled by only three of the 17 radiologists, so a set of reference annotators other than A and B rarely labels the same images. To resolve this issue, we train a predictor $\widehat\mu_r$ on the labels of each reference annotator $r$. Like $\widehat\mu_A$ in [I.1](#aggregate-score), it targets $r$'s conditional mean $\mu_r$, so its predictions on the evaluation images can serve as a surrogate for $r$'s labels. We call $\widehat\mu_r$ the *surrogate predictor* of annotator $r$.
+
+Let $\mathcal R$ be the set of reference annotators, which excludes A and B, and let $K$ be its size, the number of annotators asked about above. We let *evaluation reference* be the average of the surrogate predictors:
 
 $$
 \widehat\mu_{\mathcal R}(x)
 =\frac1K\sum_{r\in\mathcal R}\widehat\mu_r(x).
 $$
 
-This lets us construct common-image references from annotators who did not all label the evaluation images. Its immediate benefit is flexibility in forming a reference panel. We do not measure a labeling-cost reduction in these experiments. The method still needs observed B responses for the model–human comparison.
+As for $\widehat\mu_A$ in [I.1](#aggregate-score), write $\widehat\mu_r=\mu_r+\widehat e_r$ with learning error $\widehat e_r$. We make two assumptions on this error, for every $r\in\mathcal R$:
 
-A trained reference is also an approximation. Write $\widehat\mu_r=\mu_r+\widehat e_r$ and $\bar{\widehat e}_{\mathcal R}=K^{-1}\sum_r \widehat e_r$. The relevant error is not simply its validation loss; it is how its error aligns with the model–human difference. One idealizing condition used below is
+- **Centered error:** $\mathbb E_X[\widehat e_r(X)]=0$. Averaged over items, the surrogate predictor neither overestimates nor underestimates annotator $r$'s mean score.
+- **Independence:** $\widehat e_r(X)\perp\big(\widehat\mu_A(X)-Y_B(X)\big)$, as random variables of the item $X$ and B's annotation noise, with all trained predictors held fixed. The error of a surrogate predictor on an item is unrelated to the difference between the model and B on that item.
+
+With $\widehat e_{\mathcal R}=K^{-1}\sum_{r\in\mathcal R}\widehat e_r$, the learning error of the evaluation reference, they give the orthogonality condition
 
 $$
-\mathbb E[\bar{\widehat e}_{\mathcal R}(X)(\widehat\mu_A(X)-Y_B)]=0.
+\mathbb E_{X,\epsilon}\big[\widehat e_{\mathcal R}(X)\,(\widehat\mu_A(X)-Y_B(X))\big]=0.
 $$ {#eq-reference-orthogonality}
 
-This is a substantive assumption, not a consequence of using a held-out test set. Two errors can remain aligned through their dependence on the same item even when their training data are separate.
+Both assumptions require the surrogate predictors to be trained on data disjoint from the evaluation images.
 
-### Reliability for a specific comparison
+::: {.callout-note collapse="true" title="Deriving the orthogonality condition"}
 
-The gap against the latent target is
-
-$$
-\Delta^*
-=\mathbb E[(\widehat\mu_A(X)-\mu^*(X))^2-(Y_B-\mu^*(X))^2].
-$$ {#eq-latent-gap}
-
-The trained-reference gap is
+Since $\widehat e_{\mathcal R}$ is the average of the $\widehat e_r$, the expectation splits into a sum over the reference annotators. With all trained predictors held fixed, the independence assumption lets each expectation of a product factor into a product of expectations. Since $\widehat e_r(X)$ does not depend on the annotation noise, its expectation reduces to an average over items, which vanishes by the centered-error assumption:
 
 $$
-\Delta_{\widehat{\mathcal R}}
-=\mathbb E[(\widehat\mu_A(X)-\widehat\mu_{\mathcal R}(X))^2
--(Y_B-\widehat\mu_{\mathcal R}(X))^2].
+\begin{aligned}
+\mathbb E_{X,\epsilon}\big[\widehat e_{\mathcal R}(X)\,(\widehat\mu_A(X)-Y_B(X))\big]
+&=\frac1K\sum_{r\in\mathcal R}\mathbb E_{X,\epsilon}\big[\widehat e_r(X)\,(\widehat\mu_A(X)-Y_B(X))\big]\\
+&=\frac1K\sum_{r\in\mathcal R}\mathbb E_{X,\epsilon}\big[\widehat e_r(X)\big]\;\mathbb E_{X,\epsilon}\big[\widehat\mu_A(X)-Y_B(X)\big]\\
+&=\frac1K\sum_{r\in\mathcal R}\mathbb E_X\big[\widehat e_r(X)\big]\;\mathbb E_{X,\epsilon}\big[\widehat\mu_A(X)-Y_B(X)\big]=0.
+\end{aligned}
 $$
-
-We call the reference reliable **for this comparison** when the two population gaps have the same nonzero sign. This is not a global judgment that the reference annotators are unbiased or that their predictions are accurate for every task.
-
-Define the comparison-specific distortion
-
-$$
-g_{\widehat{\mathcal R}}
-=\mathbb E[(\widehat\mu_{\mathcal R}(X)-\mu^*(X))(\widehat\mu_A(X)-Y_B)].
-$$
-
-Expanding the squares gives the exact identity
-
-$$
-\Delta_{\widehat{\mathcal R}}-\Delta^*
-=-2g_{\widehat{\mathcal R}}.
-$$ {#eq-reference-distortion}
-
-The entire effect of replacing the latent target by this reference is captured by one scalar. A sufficient condition for preserving the sign is therefore
-
-$$
-|\Delta_{\widehat{\mathcal R}}|>2|g_{\widehat{\mathcal R}}|.
-$$ {#eq-population-certificate}
-
-The left side measures the strength of the comparison. The right side measures how much the reference could move it. Small gaps need a particularly accurate reference; large gaps may survive some reference error.
-
-::: {.callout-note collapse="true" title="What the latent comparison does and does not mean"}
-
-In @eq-latent-gap the human side of the comparison is the observed response $Y_B$, not the conditional mean $\mu_B$. Thus
-
-$$
-\Delta^*
-=\mathbb E[(\widehat\mu_A-\mu^*)^2-(\mu_B-\mu^*)^2]
--\mathbb E[\operatorname{Var}(Y_B\mid X,B)].
-$$
-
-Human response variability is part of this estimand. For a binary aspect the variance term is $\mu_B(1-\mu_B)$. A certified negative gap therefore concerns the MSE comparison defined above between a soft prediction and a human response. It should not be rewritten as a general claim about diagnostic skill or as a comparison between two conditional means.
-
-Also, @eq-population-certificate is sufficient, not necessary. A reference can preserve the direction without passing this conservative inequality.
 
 :::
 
-### From a population condition to a data-dependent rule
+### Reliability for a specific comparison
 
-On a main evaluation sample $D_1$ of size $n_1$, let
-
-$$
-d_i=(\widehat\mu_A(X_i)-\widehat\mu_{\mathcal R}(X_i))^2
--(Y_{B,i}-\widehat\mu_{\mathcal R}(X_i))^2.
-$$
-
-Compute $\widehat\Delta=n_1^{-1}\sum_i d_i$ and $\widehat{\mathrm{se}}(\widehat\Delta)=s_d/\sqrt{n_1}$. A lower confidence bound for the magnitude of the population gap is
+The model–human comparison asks whether the model or annotator B is closer to the latent target $\mu^*$. If $\mu^*$ were observed, the comparison would be decided by the sign of the latent gap
 
 $$
-L_\Delta
-=|\widehat\Delta|
--t_{n_1-1,1-\alpha_\Delta/2}\widehat{\mathrm{se}}(\widehat\Delta).
-$$ {#eq-gap-lower-bound}
+\Delta^*
+=\mathbb E_{X,\epsilon}[(\widehat\mu_A(X)-\mu^*(X))^2-(Y_B(X)-\mu^*(X))^2].
+$$ {#eq-latent-gap}
 
-If $B_{\mathcal R}$ is an upper bound for the magnitude of reference distortion, the operational rule is
-
-$$
-\boxed{\quad L_\Delta>2B_{\mathcal R}.\quad}
-$$ {#eq-general-certificate}
-
-When the rule holds, we say that the procedure *certifies* the direction of the comparison, or issues a certificate. A negative $L_\Delta$ cannot pass the rule. When a certificate is issued, the sign of $\widehat\Delta$ tells us whether the model or annotator B is favored. When no certificate is issued, the result is inconclusive: the gap may be too small, the reference too variable, or the bounds too conservative. Non-certification is not evidence of an incorrect reference.
-
-### A Gaussian working model for reference distortion
-
-For each trained reference, define its full contribution
+With the evaluation reference in place of $\mu^*$, it is decided by the sign of
 
 $$
-\widetilde g_r
-=\mathbb E[(\widehat\mu_r(X)-\mu^*(X))(\widehat\mu_A(X)-Y_B)].
+\Delta_{\widehat{\mathcal R}}
+=\mathbb E_{X,\epsilon}[(\widehat\mu_A(X)-\widehat\mu_{\mathcal R}(X))^2
+-(Y_B(X)-\widehat\mu_{\mathcal R}(X))^2].
 $$
 
-Then $g_{\widehat{\mathcal R}}=K^{-1}\sum_r\widetilde g_r$ exactly. Under the decomposition $\mu_r=\mu^*+b_r$ of [Part I](#part-1), @eq-reference-orthogonality removes the average contribution of surrogate prediction errors. A Gaussian random-effects formulation additionally models the individual $\widetilde g_r$ as independent, centered effects with scale $\tau_g$.
+We call the evaluation reference *reliable* for this comparison if the two gaps have the same nonzero sign, so that both name the same better performer.
 
-For our bounded responses and sigmoid predictions, an exactly nondegenerate Gaussian distribution is incompatible with the bounded support of these contributions. We therefore treat it as a **working random-effects approximation** for the real-data procedure. Centering, independence, and its quality as an approximation are assumptions, not facts implied by the construction of an ensemble. The calibration below estimates a scale for the complete trained-reference contributions; average surrogate-error orthogonality alone does not establish their individual distribution.
-
-Within the Gaussian idealization, averaging K effects yields the distortion bound
+How far can the two gaps differ? Replacing $\mu^*$ with the evaluation reference changes the gap by
 
 $$
-B_{\mathcal R}^{\mathrm{G}}
-=z_{1-\alpha_g/2}\frac{U_g}{\sqrt K},
+\Delta_{\widehat{\mathcal R}}-\Delta^*
+=-2g_{\widehat{\mathcal R}},
+\qquad
+g_{\widehat{\mathcal R}}
+=\mathbb E_{X,\epsilon}[(\widehat\mu_{\mathcal R}(X)-\mu^*(X))(\widehat\mu_A(X)-Y_B(X))].
+$$ {#eq-reference-distortion}
+
+The two gaps must have the same sign whenever $\Delta_{\widehat{\mathcal R}}$ exceeds this change in magnitude:
+
+$$
+|\Delta_{\widehat{\mathcal R}}|>|\Delta_{\widehat{\mathcal R}}-\Delta^*|=2|g_{\widehat{\mathcal R}}|.
+$$ {#eq-population-certificate}
+
+::: {.callout-note collapse="true" title="Deriving the change in the gap"}
+
+Subtracting @eq-latent-gap from the definition of $\Delta_{\widehat{\mathcal R}}$ and applying $u^2-v^2=(u-v)(u+v)$ to the model terms and to B's terms separately,
+
+$$
+\begin{aligned}
+\Delta_{\widehat{\mathcal R}}-\Delta^*
+&=\mathbb E_{X,\epsilon}\big[(\widehat\mu_A(X)-\widehat\mu_{\mathcal R}(X))^2-(\widehat\mu_A(X)-\mu^*(X))^2\big]
+-\mathbb E_{X,\epsilon}\big[(Y_B(X)-\widehat\mu_{\mathcal R}(X))^2-(Y_B(X)-\mu^*(X))^2\big]\\
+&=\mathbb E_{X,\epsilon}\big[(\mu^*(X)-\widehat\mu_{\mathcal R}(X))\big(2\widehat\mu_A(X)-\widehat\mu_{\mathcal R}(X)-\mu^*(X)\big)\big]
+-\mathbb E_{X,\epsilon}\big[(\mu^*(X)-\widehat\mu_{\mathcal R}(X))\big(2Y_B(X)-\widehat\mu_{\mathcal R}(X)-\mu^*(X)\big)\big]\\
+&=-2\,\mathbb E_{X,\epsilon}\big[(\widehat\mu_{\mathcal R}(X)-\mu^*(X))(\widehat\mu_A(X)-Y_B(X))\big].
+\end{aligned}
+$$
+
+Since $\Delta^*=\Delta_{\widehat{\mathcal R}}+2g_{\widehat{\mathcal R}}$, the two gaps share a nonzero sign if and only if $\Delta_{\widehat{\mathcal R}}(\Delta_{\widehat{\mathcal R}}+2g_{\widehat{\mathcal R}})>0$, which holds whenever $|\Delta_{\widehat{\mathcal R}}|>2|g_{\widehat{\mathcal R}}|$.
+
+:::
+
+The condition in @eq-population-certificate cannot be checked directly: the gap $\Delta_{\widehat{\mathcal R}}$ can be estimated from the evaluation images, but $g_{\widehat{\mathcal R}}$ involves the unobserved latent target. We therefore develop a test that bounds $g_{\widehat{\mathcal R}}$ using how the reference annotators differ from one another, and certifies the reference when the estimated gap clearly exceeds this bound.
+
+### Testing reliability from data
+
+The test uses two sets of images labeled by B: a main set $D_1$ of $n_1$ images, on which the gap is estimated, and a calibration set $D_2$ of $n_2$ images, on which $g_{\widehat{\mathcal R}}$ is bounded. The two sets may coincide.
+
+#### The Gaussian assumption
+
+We treat the $K$ reference annotators as random draws from the annotator population, so the quantities
+
+$$
+g_{\widehat r}
+=\mathbb E_{X,\epsilon}[(\widehat\mu_r(X)-\mu^*(X))(\widehat\mu_A(X)-Y_B(X))],
+\qquad r\in\mathcal R,
+$$
+
+are random, and so is their average $g_{\widehat{\mathcal R}}:=K^{-1}\sum_{r\in\mathcal R}g_{\widehat r}$. The test rests on the following assumption.
+
+- **Gaussian assumption:** $g_{\widehat r}\overset{\mathrm{IID}}{\sim}N(0,\tau_g^2)$ for any annotator $r$.
+
+Under this assumption, $g_{\widehat{\mathcal R}}\sim N(0,\tau_g^2/K)$, so
+
+$$
+|g_{\widehat{\mathcal R}}|\leq z_{1-\alpha_g/2}\frac{\tau_g}{\sqrt K}
+\quad\text{w.p. }1-\alpha_g.
+$$ {#eq-gaussian-tail}
+
+This is where the number of annotators enters.
+
+::: {.callout-note collapse="true" title="Why the Gaussian assumption is plausible"}
+
+The surrogate predictor of annotator $r$ differs from the latent target by $\widehat\mu_r-\mu^*=b_r+\widehat e_r$, the bias of $r$ plus its learning error. Since B's annotation noise is centered, $g_{\widehat r}$ splits accordingly:
+
+$$
+g_{\widehat r}
+=\mathbb E_X\big[b_r(X)(\widehat\mu_A(X)-\mu_B(X))\big]
++\mathbb E_X\big[\widehat e_r(X)(\widehat\mu_A(X)-\mu_B(X))\big].
+$$
+
+The second term vanishes for every $r$ by the centered-error and independence assumptions, so $g_{\widehat r}$ equals the first term. Conditional on $\widehat\mu_A$ and B, the first term is random only through which annotator is drawn. Suppose that for any finite collection of items $x_1,\ldots,x_n$, the vector $(b_r(x_1),\ldots,b_r(x_n))$ is jointly Gaussian over the annotator population. Then the finite-sample version of the first term,
+
+$$
+\frac1n\sum_{i=1}^n b_r(x_i)(\widehat\mu_A(x_i)-\mu_B(x_i)),
+$$
+
+is a linear combination of a jointly Gaussian vector and is therefore Gaussian. As $n$ grows, with $x_1,\ldots,x_n$ drawn from the item distribution, this average converges to the first term of $g_{\widehat r}$, and a limit of Gaussian variables is Gaussian.
+:::
+
+#### Calibrating the scale without the latent target
+
+The bound @eq-gaussian-tail depends on the unknown scale $\tau_g$. Each $g_{\widehat r}$ involves the latent target, but the difference between two of them does not:
+
+$$
+g_{\widehat r}-g_{\widehat s}
+=\mathbb E_{X,\epsilon}[(\widehat\mu_r(X)-\widehat\mu_s(X))(\widehat\mu_A(X)-Y_B(X))].
+$$
+
+These differences can therefore be estimated on $D_2$ by averaging $(\widehat\mu_r(X_i)-\widehat\mu_s(X_i))(\widehat\mu_A(X_i)-Y_B(X_i))$ over its images. Under the Gaussian assumption, the spread of these estimates across the reference annotators reflects $\tau_g$, so inverting a chi-square test on them gives an upper confidence bound $U_g$ with $\Pr(\tau_g\leq U_g)\geq1-\gamma+o(1)$ as $n_2\to\infty$. Substituting $U_g$ into @eq-gaussian-tail, we have
+
+$$
+|g_{\widehat{\mathcal R}}|\leq B_{\mathcal R}:=z_{1-\alpha_g/2}\frac{U_g}{\sqrt K}
+\quad\text{w.p. at least }1-\alpha_g-\gamma+o(1).
 $$ {#eq-gaussian-bound}
 
-where $U_g$ is an upper confidence bound for $\tau_g$. The resulting procedure compares the uncertainty-adjusted evaluation gap with twice this quantity.
+::: {.callout-note collapse="true" title="Computing the upper bound for the scale"}
 
-### Calibrating the distortion scale without observing the latent target
-
-The latent target appears in $\widetilde g_r$, so we cannot measure each contribution directly. Differences between reference predictions solve that particular problem. On a calibration sample $D_2$, take one reference as a baseline and compute
+Take one reference annotator, indexed by 1, as the baseline, and for $r=2,\ldots,K$ let
 
 $$
 W_{i,r}
-=(\widehat\mu_r(X_i)-\widehat\mu_1(X_i))(\widehat\mu_A(X_i)-Y_{B,i}),
-\qquad r=2,\ldots,K.
+=(\widehat\mu_r(X_i)-\widehat\mu_1(X_i))(\widehat\mu_A(X_i)-Y_B(X_i)),
+\qquad i\in D_2,
 $$
 
-Their means estimate $\widetilde g_r-\widetilde g_1$: the unknown target cancels. The variation between these contrasts informs the between-reference scale, while their item-level covariance accounts for finite calibration-sample noise. Because all contrasts share the same baseline, their covariance is not diagonal.
-
-This is **bias-scale calibration**. It is different from the temperature scaling in [Part I](#part-1), which adjusts predicted probabilities using observed labels.
-
-::: {.callout-note collapse="true" title="Calibration formula and implementation"}
-
-Let $\bar W$ be the $(K-1)$-dimensional vector of calibration means and $\widehat\Omega$ the sample covariance of the item-level vectors. Write
+so that the mean $\bar W_r$ of $W_{i,r}$ over $D_2$ estimates $g_{\widehat r}-g_{\widehat 1}$. Let $\bar W=(\bar W_2,\ldots,\bar W_K)^\top$ and let $\widehat\Omega$ be the sample covariance of $(W_{i,2},\ldots,W_{i,K})$ over $D_2$. Under the Gaussian assumption, $\operatorname{Var}(g_{\widehat r}-g_{\widehat 1})=2\tau_g^2$ and $\operatorname{Cov}(g_{\widehat r}-g_{\widehat 1},g_{\widehat s}-g_{\widehat 1})=\tau_g^2$ for $r\neq s$, because all differences share the baseline. For a candidate value $t$ of $\tau_g$, the covariance of $\bar W$ is therefore estimated by
 
 $$
-M=I_{K-1}+\mathbf1\mathbf1^\top,\qquad
-\widehat V(t)=t^2M+\widehat\Omega/n_2,
+\widehat V(t)=t^2\big(I_{K-1}+\mathbf1\mathbf1^\top\big)+\widehat\Omega/n_2,
+\qquad
+Q(t)=\bar W^\top\widehat V(t)^{-1}\bar W .
 $$
 
-and
-
-$$
-Q(t)=\bar W^\top\widehat V(t)^{-1}\bar W.
-$$
-
-The matrix $M$ represents the shared reference effect in the contrasts. Where the inverse is defined, $Q(t)$ decreases as the candidate scale $t$ increases. Let $q_{\gamma,K-1}$ be the **lower** $\gamma$ quantile of a chi-square distribution with $K-1$ degrees of freedom. Define
+With $K$ fixed and $n_2\to\infty$, $Q(\tau_g)$ converges in distribution to $\chi^2_{K-1}$ by the multivariate central limit theorem and Slutsky's theorem. Since $Q(t)$ is non-increasing in $t$, inverting it at the lower $\gamma$ quantile $q_{\gamma,K-1}$ of $\chi^2_{K-1}$ gives
 
 $$
 U_g=\sup\{t\geq0:Q(t)\geq q_{\gamma,K-1}\},
 $$ {#eq-scale-calibration}
 
-with endpoint zero when the set is empty. Singular covariance cases require explicit handling in the implementation; an undefined inverse is not a valid certificate.
-
-Under the ideal Gaussian reference-effect model and appropriate item-sampling conditions, this provides asymptotic upper coverage for the scale with K fixed. The finite-sample covariance expression is an approximation when item covariance depends on the realized reference panel. The boundary $\tau_g=0$ is conservatively covered by the nonnegative endpoint; coverage need not equal exactly $1-\gamma$ there.
-
-Even with infinitely many calibration items, a fixed number of annotators leaves uncertainty. For positive scale and fixed K, the limiting endpoint is
-
-$$
-\sqrt{
-\frac{\sum_{r=1}^K(\widetilde g_r-\bar{\widetilde g})^2}
-{q_{\gamma,K-1}}
-}.
-$$
-
-It remains random across annotator panels. More items and more annotators address different uncertainties.
+with $U_g=0$ when the set is empty, and $\Pr(\tau_g\leq U_g)\geq1-\gamma+o(1)$. On this event and the event in @eq-gaussian-tail, $|g_{\widehat{\mathcal R}}|\leq z_{1-\alpha_g/2}\tau_g/\sqrt K\leq B_{\mathcal R}$, and a union bound gives @eq-gaussian-bound.
 
 :::
 
-### What the certificate controls
+#### Establishing the test
 
-The formal argument combines three events: coverage for the main comparison, upper coverage for the distortion scale, and a tail bound for the sampled reference panel. Under the sampling and distributional assumptions, their failure probabilities give
+On $D_1$, the gap $\Delta_{\widehat{\mathcal R}}$ is estimated by the average $\widehat\Delta$ of the image-level differences
+
+$$
+d_i:=(\widehat\mu_A(X_i)-\widehat\mu_{\mathcal R}(X_i))^2
+-(Y_B(X_i)-\widehat\mu_{\mathcal R}(X_i))^2,
+$$
+
+with standard error $\widehat{\mathrm{se}}(\widehat\Delta)=s_d/\sqrt{n_1}$, where $s_d$ is the sample standard deviation of the image-level differences $d_i$. Following @eq-population-certificate, the test *certifies* the evaluation reference $\widehat \mu_{\mathcal{R}}$ for this comparison when
+
+$$
+\boxed{\quad |\widehat\Delta|-t_{n_1-1,1-\alpha_\Delta/2}\,\widehat{\mathrm{se}}(\widehat\Delta)>2B_{\mathcal R}.\quad}
+$$ {#eq-general-certificate}
+
+When the reference is certified, the sign of $\widehat\Delta$ tells whether the model or B performs better. A certificate is false if the reference is in fact not reliable, that is, if $\Delta_{\widehat{\mathcal R}}\Delta^*\leq0$. The test controls the probability of a false certificate by
 
 $$
 \Pr\!\left\{
 \text{certificate issued and }
 \Delta_{\widehat{\mathcal R}}\Delta^*\leq0
 \right\}
-\leq\alpha_\Delta+\alpha_g+\gamma+o(1).
+\leq\alpha_\Delta+\alpha_g+\gamma+o(1),
 $$ {#eq-false-certificate}
 
-This is a probability over the random reference panel and evaluation/calibration samples, with the other permitted quantities fixed. On the same successful events, the reported empirical sign also agrees with the population signs. It is not a conditional error guarantee for every realized panel, nor a posterior probability that a selected certificate is correct. For the bounded real-data application, the Gaussian approximation and trained-reference assumptions further limit how literally the nominal bound can be interpreted.
+where $\alpha_\Delta$, $\alpha_g$, and $\gamma$ are the failure probabilities of the three bounds the test relies on: the confidence bound for the gap, the Gaussian tail bound @eq-gaussian-tail, and the upper bound $U_g$ for $\tau_g$.
 
-The explicit $1/\sqrt K$ term explains why a larger panel can help when the effect scale remains controlled. It does not, by itself, prove a growing-K theorem for the estimated-scale procedure: the calibration argument above holds K fixed. Nor does increasing K repair systematic surrogate errors or dependence between annotators.
+::: {.callout-note collapse="true" title="Proof of the error bound"}
 
-::: {.callout-note collapse="true" title="Why the three error terms add"}
+Suppose the reference is not reliable, $\Delta_{\widehat{\mathcal R}}(\Delta_{\widehat{\mathcal R}}+2g_{\widehat{\mathcal R}})\leq0$. Then 0 lies between $\Delta_{\widehat{\mathcal R}}$ and $\Delta_{\widehat{\mathcal R}}+2g_{\widehat{\mathcal R}}$, so $|\Delta_{\widehat{\mathcal R}}|\leq2|g_{\widehat{\mathcal R}}|$. Consider the events
 
-On the main-sample coverage event, $L_\Delta\leq|\Delta_{\widehat{\mathcal R}}|$. If the reference does not preserve the latent sign, @eq-reference-distortion implies
+- $E_1=\{|\widehat\Delta-\Delta_{\widehat{\mathcal R}}|\leq t_{n_1-1,1-\alpha_\Delta/2}\,\widehat{\mathrm{se}}(\widehat\Delta)\}$, with $\Pr(E_1)\geq1-\alpha_\Delta+o(1)$ by the central limit theorem for the paired differences $d_i$; on $E_1$, $|\widehat\Delta|-t_{n_1-1,1-\alpha_\Delta/2}\,\widehat{\mathrm{se}}(\widehat\Delta)\leq|\Delta_{\widehat{\mathcal R}}|$;
+- $E_2=\{\tau_g\leq U_g\}$, with $\Pr(E_2)\geq1-\gamma+o(1)$ by the calibration;
+- $E_3=\{|g_{\widehat{\mathcal R}}|\leq z_{1-\alpha_g/2}\,\tau_g/\sqrt K\}$, with $\Pr(E_3)=1-\alpha_g$ by @eq-gaussian-tail.
+
+On $E_1\cap E_2\cap E_3$,
 
 $$
-|\Delta_{\widehat{\mathcal R}}|\leq2|g_{\widehat{\mathcal R}}|.
+|\widehat\Delta|-t_{n_1-1,1-\alpha_\Delta/2}\,\widehat{\mathrm{se}}(\widehat\Delta)\leq|\Delta_{\widehat{\mathcal R}}|\leq2|g_{\widehat{\mathcal R}}|\leq2z_{1-\alpha_g/2}\frac{U_g}{\sqrt K}=2B_{\mathcal R},
 $$
 
-On the scale-coverage and reference-tail events, $|g_{\widehat{\mathcal R}}|\leq B_{\mathcal R}$. A wrong-sign reference therefore cannot satisfy $L_\Delta>2B_{\mathcal R}$ while all three events hold. A union bound gives @eq-false-certificate. This proof does not require independence between those three events. In particular, it does not condition a reference-tail probability on having passed scale calibration.
+so no certificate is issued. A wrong certificate therefore requires the complement of $E_1\cap E_2\cap E_3$, whose probability is at most $\alpha_\Delta+\gamma+\alpha_g+o(1)$ by the union bound.
 
 :::
 
-### Real-data experiment: R11–R16 trained references
+### Experiment
 
-For this experiment we use radiologists R11–R16, a group of six annotators selected to improve the comparability of their predominantly negative annotations. This is a practical cohort choice, not proof that these six annotators are IID draws from the theoretical population or that their item distributions are identical.
+#### Experimental setting
 
-Each annotator-specific model predicts the same 27-indicator average used in the scalar experiment of [Part I](#part-1). The data construction holds out one third of unique image IDs for evaluation, using seed 42, and prepares annotator-specific training and validation sets from the remaining images. With six annotators, excluding A and B leaves at most four references.
+We use six radiologists R11–R16^[In VinDr-CXR, radiologists R11–R16 labeled images with few positive findings, whereas R8–R10 labeled images with more positive findings. The test treats the annotators as IID draws from one population labeling the same image distribution, so we choose A, B, and the reference annotators only from R11–R16, whose surrogate predictors are learned from the same case mix.] from the VinDr-CXR dataset. We run the test on every configuration, that is, every choice of a training annotator A and a human B among them, together with $K=2, 3,$ or $4$ of the remaining four as the reference annotators. As in [I.1](#aggregate-score), we work with the aggregate score throughout this part: the model and the surrogate predictors are trained to predict each annotator's aggregate scores, and B's aggregate scores enter the comparison. 
 
-We split a total error budget `prob` equally, $\alpha_\Delta=\alpha_g=\gamma=\text{prob}/3$, so that the nominal bound in @eq-false-certificate equals `prob` under the procedure's assumptions. A rejection means that the procedure certifies the direction of the comparison; the rejection percentages below are descriptive frequencies of that decision.
+By @eq-false-certificate, the sum $\alpha:=\alpha_\Delta+\alpha_g+\gamma$ bounds the probability of a false certificate; we call it the *total error budget*. We split it equally among the three bounds, setting $\alpha_\Delta=\alpha_g=\gamma=\alpha/3$, and run the test at $\alpha=0.01$, 0.05, 0.10, and 0.20.
 
-Certification is uncommon at the smallest error budget. Across all 330 configurations, the rejection percentage rises from 0.6% at a total error budget of 0.01 to 18.2% at 0.20. At 0.20, the percentages are 10%, 23.3%, and 46.7% with 2, 3, and 4 references. These are descriptive rates over enumerated configurations, which reuse annotators and images. They measure how often the procedure reaches a certification decision, not its accuracy against known ground truth.
+#### Result
+
+For each $K$ and $\alpha$, we call the fraction of configurations in which the test certifies the reference as the *certification rate*. A certification means that the $K$ reference annotators of that configuration form a reliable reference for the model-human comparison between $\widehat \mu_A$ and $Y_B$: their evaluation reference names the same better performer as the latent target, up to a false-certification probability of at most $\alpha$. @fig-continuous-task2 shows that it increases with the total error budget and with the number of reference annotators. At $\alpha=0.20$, the test certifies 10% of the configurations with two reference annotators, 23.3% with three, and 46.7% with four. More reference annotators shrink $B_{\mathcal R}$, through the factor $1/\sqrt K$ and through a calibration of $\tau_g$ with more degrees of freedom, so smaller gaps between the model and B can be certified.
 
 ::: {#fig-continuous-task2}
 
@@ -223,46 +256,30 @@ Certification is uncommon at the smallest error budget. Across all 330 configura
 
 | | 0.01 | 0.05 | 0.10 | 0.20 |
 |---|---:|---:|---:|---:|
-| 2 references | 0.6% | 1.7% | 4.4% | 10% |
-| 3 references | 0.8% | 3.3% | 6.7% | 23.3% |
-| 4 references | 0% | 10% | 16.7% | 46.7% |
+| *K* = 2 | 0.6% | 1.7% | 4.4% | 10% |
+| *K* = 3 | 0.8% | 3.3% | 6.7% | 23.3% |
+| *K* = 4 | 0% | 10% | 16.7% | 46.7% |
 
 :::
 
 :::
 
-How often the procedure certifies a comparison. Rejection percentage by number of references (rows) and total error budget (columns).
+How often the test certifies the reference. Certification rate by number of reference annotators $K$ (rows) and total error budget $\alpha$ (columns).
 
 :::
 
-The rows contain different numbers and compositions of reference panels. The rise across rows therefore does not mean that any single comparison passes once more references are added, and it is not a causal effect estimated from independent resampling. Most configurations remain uncertified even at a total error budget of 0.20. That pattern is compatible with a rule that requires a sufficiently strong comparison margin relative to reference distortion and sampling uncertainty; it does not establish that the remaining references are wrong. Without an observed latent target, these counts do not directly measure false-certification probability.
+::: {.callout-note collapse="true" title="Experimental details"}
 
-::: {.callout-note collapse="true" title="Experiment notes"}
-
-Each total error budget (`prob`) evaluates 330 configurations: 180 with 2 references, 120 with 3, and 30 with 4. The split-total calibration allocates prob / 3 to each of $\alpha_\Delta$, $\alpha_g$, and $\gamma$. Each percentage is the number of certification decisions divided by the configurations in that cell; select a cell in the heatmap to see its count.
-
-Pooled over K, the procedure certifies 2/330, 10/330, 21/330, and 60/330 configurations at prob = 0.01, 0.05, 0.10, and 0.20. These pooled percentages are computed from total counts, not by averaging the three row percentages.
-
-The number of evaluation images depends on the compared human B: R11 512, R12 549, R13 535, R14 485, R15 551, R16 547.
-
-In the CSV files, `n_true` and `true_percent` count decisions equal to True, that is, certification decisions. They are not counts of correct certifications or accuracy rates. `B_true` identifies the compared human annotator, not a latent ground truth.
-
-[Rejection percentages by K and prob (CSV)](data/task2-scalar/by-k-prob.csv) · [All 1,320 configuration results (CSV)](data/task2-scalar/configurations.csv) · [Run metadata (JSON)](data/task2-scalar/meta.json)
+The 30 ordered pairs (A, B) give 330 configurations per total error budget: 180 with 2 reference annotators, 120 with 3, and 30 with 4. Each percentage is the number of certifications divided by the number of configurations in that cell; select a cell in the heatmap to see its count. Pooled over $K$, the test certifies 2, 10, 21, and 60 of the 330 configurations at total error budgets 0.01, 0.05, 0.10, and 0.20.
 
 :::
 
-::: {.callout-note collapse="true" title="Inspect one comparison"}
+#### Result for each configuration
 
-Choose a comparison and a total error budget to see every reference panel evaluated for it. A panel is certified when the observed gap between model and human loss exceeds the gap the procedure requires.
+The table below lists the decision of the test for each configuration. For a chosen pair of A and B and a chosen total error budget, each row is one set of reference annotators. The *observed gap* is $|\widehat\Delta|$, the estimated gap between the model and B against the evaluation reference of these annotators. The *required gap* is $t_{n_1-1,1-\alpha_\Delta/2}\,\widehat{\mathrm{se}}(\widehat\Delta)+2B_{\mathcal R}$, the smallest observed gap that satisfies @eq-general-certificate. The reference is certified (✓) when the observed gap exceeds the required gap.
+
+In the table, the menu *Comparison* selects the pair, written as "A-trained model vs B", and the buttons select the total error budget. Rows are grouped by the number of reference annotators $K$, and certified rows are highlighted. Selecting a row shows below the table how its decision is reached.
 
 ::: {.ab-widget data-widget="continuous-inspect"}
-This interactive table requires JavaScript. The full results are in the configuration CSV above.
+This interactive table requires JavaScript.
 :::
-
-"Not certified" means that the procedure reaches no conclusion for that panel. It does not mean that the opposite direction holds or that the reference has been shown to be unreliable.
-
-:::
-
-### What this part adds
-
-The key object is the gap between the comparison signal and the largest distortion allowed by the procedure. Trained references make that object accessible even with sparse labeling overlap. Their usefulness still depends on how well the statistical model describes annotator variation and surrogate error. Binary outcomes raise an additional issue: centering bias before a nonlinear link need not center the resulting probabilities.

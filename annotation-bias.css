@@ -83,21 +83,50 @@ h4 {
   margin-top: 1.8em;
 }
 
-/* Part tabset */
+/* Part tabset: three equal tabs that read as the article's main divisions */
 .panel-tabset > .nav-tabs {
-  border-bottom: 1px solid var(--article-line);
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin-top: 2em;
+  border-bottom: 3px solid var(--article-accent);
+}
+
+.panel-tabset > .nav-tabs .nav-item {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .panel-tabset > .nav-tabs .nav-link {
-  color: var(--article-muted);
-  border: none;
-  border-bottom: 2px solid transparent;
+  width: 100%;
+  height: 100%;
+  padding: 0.75em 0.8em;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--article-accent);
+  background: #eef3f8;
+  border: 1px solid #cbd8e5;
+  border-bottom: none;
+  border-radius: var(--article-radius) var(--article-radius) 0 0;
+}
+
+.panel-tabset > .nav-tabs .nav-link:hover {
+  background: #e0e9f2;
 }
 
 .panel-tabset > .nav-tabs .nav-link.active {
-  color: var(--article-ink);
-  border-bottom: 2px solid var(--article-accent);
-  background: transparent;
+  color: #ffffff;
+  background: var(--article-accent);
+  border-color: var(--article-accent);
+}
+
+@media (max-width: 576px) {
+  .panel-tabset > .nav-tabs .nav-link {
+    padding: 0.6em 0.3em;
+    font-size: 0.95rem;
+  }
 }
 
 /* Links */
@@ -759,21 +788,25 @@ button.ab-heat-cell {
   display: flex;
   align-items: center;
   gap: 0.8em;
-  margin: 0.3em 0;
+  margin: 0.3em 0 1.5em;
 }
 
 .ab-heat-legend-scale {
-  display: inline-flex;
-  flex-direction: column;
+  position: relative;
   width: 180px;
 }
 
 .ab-heat-legend-bar {
+  display: block;
   height: 10px;
   border-radius: 2px;
 }
 
 .ab-heat-legend-ticks {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
   display: flex;
   justify-content: space-between;
   font-size: 14px;
@@ -927,6 +960,12 @@ p > span[id^="eq-"]:not(:only-child) > .math.display > mjx-container.MathJax {
   margin: 0.5em 0;
 }
 
+/* Display equations inside list items (e.g. an assumption bullet) */
+li > .math.display > mjx-container.MathJax,
+li > span[id^="eq-"] > .math.display > mjx-container.MathJax {
+  margin: 0.7em 0;
+}
+
 @media (max-width: 767.98px) {
   #quarto-document-content table {
     display: block;
@@ -962,4 +1001,10 @@ p > span[id^="eq-"]:not(:only-child) > .math.display > mjx-container.MathJax {
 /* 隐藏 Quarto 预览的渲染日志浮层 */
 .fui-DialogSurface:has(.ansi-display) {
   display: none !important;
+}
+
+/* Revision markup: text added in the Bernoulli revision (remove the class once accepted) */
+.ab-new,
+.ab-new mjx-container {
+  color: #c62828;
 }

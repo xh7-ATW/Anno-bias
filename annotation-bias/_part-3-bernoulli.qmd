@@ -1,178 +1,246 @@
-**Takeaway.** Under a logit-bias model, averaging references reduces random variation but can leave a systematic probability-scale shift. A Bernoulli certificate must allow for both effects.
+**Takeaway.** For binary labels, annotator bias acts on the logit scale, so averaging more reference annotators leaves a shift away from the latent target that does not shrink with their number. The test of [Part II](#part-2) carries over with a new bound for $g_{\widehat{\mathcal R}}$ that accounts for this shift. On semi-synthetic data, certification becomes possible once the reference panel is large enough.
 
-### Why the argument of Part II does not transfer unchanged
+[Part II](#part-2) works with the aggregate score. This part turns to the 27 binary labels and asks the same question for each finding: when is a panel of reference annotators reliable for a model–human comparison?
 
-For one binary label, suppress its index and write
+### Why binary labels need a new bound
+
+Since the analysis applies to each finding separately, we omit the finding index $h$ and recall the modeling of $Y_r$:
 
 $$
-Y_r\mid X,r\sim\operatorname{Bernoulli}(\mu_r(X)),
+Y_r(x)\sim\operatorname{Bernoulli}(\mu_r(x)),
 \qquad
-\mu_r(X)=\sigma(\operatorname{logit}\mu^*(X)+b_r(X)),
+\operatorname{logit}\mu_r(x)=\operatorname{logit}\mu^*(x)+b_r(x),
 $$ {#eq-bernoulli-model}
 
-where $\sigma(u)=(1+e^{-u})^{-1}$. Assume the bias is centered over annotators at each item: $\mathbb E_r b_r(x)=0$.
+with centered logit bias, i.e., $\mathbb E_r[b_r(x)]=0$.
 
-Because the sigmoid is nonlinear,
+::: {.ab-new}
 
-$$
-\mathbb E_r\sigma(\operatorname{logit}\mu^*(x)+b_r(x))
-\quad\text{need not equal}\quad\mu^*(x).
-$$
-
-An arbitrarily large probability-averaging panel can therefore converge to a value different from the latent target. In this model, $\operatorname{logit}\mu^*(x)$ is the population-average logit; this is a different centering convention from Parts [I](#part-1) and [II](#part-2), where $\mu^*$ is the population-average probability.
-
-The loss gap, the distortion identity @eq-reference-distortion, and the lower bound $L_\Delta$ from [Part II](#part-2) remain the same. What changes is the bound for reference distortion.
-
-### Separate average logit offsets from item-dependent variation
-
-We assume that the reference annotators, together with their entire bias functions $b_r(\cdot)$, are IID draws, independent of A, B, and the fitted model $\widehat\mu_A$; the analysis of the reference panel conditions on $\widehat\mu_A$ and B. Independent average offsets alone would not be enough: shared item-dependent bias components could still make the reference effects dependent.
-
-Let
+As in [I.2](#binary-labels), the model enters the comparison through its binary decision $\widehat Y_A=\mathbf 1\{\widehat\mu_A\geq t\}$ (@eq-binary-decision). The threshold is fixed before evaluation without using the reference annotators, so the decision does not depend on which annotators form the reference. B's label is binary as well, while both references are probability functions: the latent target $\mu^*$ and the evaluation reference $\widehat\mu_{\mathcal R}$. The gaps are therefore squared-loss comparisons of two binary outputs against a probability,
 
 $$
-C_r=\mathbb E_X b_r(X),\qquad C_r\overset{\mathrm{IID}}\sim N(0,\tau^2).
+\Delta^*
+=\mathbb E_{X,\epsilon}\big[(\widehat Y_A(X)-\mu^*(X))^2-(Y_B(X)-\mu^*(X))^2\big]
+=\mathbb E_{X,\epsilon}\big[(\widehat Y_A(X)-Y_B(X))(1-2\mu^*(X))\big],
 $$
 
-Allow bias to vary across items, but bound its average variation by
+and $\Delta_{\widehat{\mathcal R}}$ is the same with $\widehat\mu_{\mathcal R}$ in place of $\mu^*$. The relation @eq-reference-distortion holds with $\widehat Y_A$ in place of $\widehat\mu_A$, now with
 
 $$
-\mathbb E_r\operatorname{Var}_X(b_r(X))
-\leq(\kappa-1)\tau^2,\qquad\kappa\geq1.
-$$ {#eq-kappa-assumption}
+g_{\widehat{\mathcal R}}=\mathbb E_{X,\epsilon}\big[(\widehat\mu_{\mathcal R}(X)-\mu^*(X))(\widehat Y_A(X)-Y_B(X))\big].
+$$
 
-Thus $\mathbb E_X\mathbb E_r b_r(X)^2\leq\kappa\tau^2$. The parameter $\tau$ measures between-annotator average logit offsets; $\kappa$ limits additional item-dependent variation. The Gaussian law is now imposed on unbounded logit offsets, not on bounded probability-scale distortion terms.
+:::
 
-For trained references, write $\widehat\mu_r=\mu_r+\widehat e_r$ on the **probability scale**. Under the error moment in @eq-reference-orthogonality, the aggregate surrogate-error contribution vanishes, and the relevant reference effects are
+<!-- REVISED: g_r now uses the decision. Original text:
+
+The test @eq-general-certificate of [Part II](#part-2) carries over to this model; what must be derived anew is the bound $B_{\mathcal R}$ on $|g_{\widehat{\mathcal R}}|$. As in [Part II](#part-2), $g_{\widehat{\mathcal R}}$ is the average over the reference annotators of
 
 $$
-g_r=\mathbb E_X[(\mu_r(X)-\mu^*(X))(\widehat\mu_A(X)-\mu_B(X))],
+g_r=\mathbb E_X[(\mu_r(X)-\mu^*(X))(\widehat\mu_A(X)-\mu_B(X))].
+$$
+
+-->
+
+The test @eq-general-certificate of [Part II](#part-2) carries over to this model; what must be derived anew is the bound $B_{\mathcal R}$ on $|g_{\widehat{\mathcal R}}|$. [Under the probability-scale error assumption below, $g_{\widehat{\mathcal R}}$ is the average over the reference annotators of]{.ab-new}
+
+::: {.ab-new}
+
+$$
+g_r=\mathbb E_X[(\mu_r(X)-\mu^*(X))(\widehat Y_A(X)-\mu_B(X))].
+$$
+
+:::
+
+However, the Gaussian assumption in [Part II](#part-2), that the $g_{\widehat r}$ are IID draws from $N(0,\tau_g^2)$, does not suit here, for two reasons. First, because the sigmoid is nonlinear, centered logit bias does not center the probabilities: $\mathbb E_r[\mu_r(x)]$ differs from $\mu^*(x)$ in general, so $\mathbb E_r[g_r]\neq0$. Second, because probabilities lie in $[0,1]$, $g_r$ must be bounded. Therefore we place the Gaussian assumption on the logit scale and bound $g_{\widehat{\mathcal R}}$ directly.
+
+### Assumptions for binary labels
+
+<!-- REVISED. Original sentence: We make three additional assumptions on the surrogate predictors $\widehat \mu_r(X)$ and the bias function $b_r(X)$ of reference annotators. -->
+
+[We make four assumptions on the surrogate predictors $\widehat\mu_r$ and the bias functions $b_r$ of the reference annotators.]{.ab-new}
+
+- [**Probability-scale error:** for every $r\in\mathcal R$, $\mathbb E_X[\widehat e_r(X)]=0$ and $\widehat e_r(X)\perp\big(\widehat Y_A(X)-Y_B(X)\big)$, where $\widehat e_r=\widehat\mu_r-\mu_r$. These are the assumptions of [Part II](#part-2) with the decision $\widehat Y_A$ in place of $\widehat\mu_A$. They give $\mathbb E_{X,\epsilon}\big[\widehat e_{\mathcal R}(X)(\widehat Y_A(X)-Y_B(X))\big]=0$, so the learning errors drop out of $g_{\widehat{\mathcal R}}$.]{.ab-new}
+
+- **Centered logit error:** $\mathbb E_X[\operatorname{logit}\widehat\mu_r(X)-\operatorname{logit}\mu_r(X)]=0$. Averaged over items, the logit of the surrogate predictor neither overestimates nor underestimates the logit of annotator $r$'s mean score.
+- **Gaussian logit offsets:** $C_r:=\mathbb E_X[b_r(X)]$ satisfies $C_r\overset{\mathrm{IID}}{\sim}N(0,\tau^2)$. The offset $C_r$ is annotator $r$'s logit bias averaged over items, and $\tau$ measures how much these offsets differ across annotators.
+- **Bounded item-dependent variation:** for some $\kappa\geq1$,
+  $$
+  \mathbb E_r\operatorname{Var}_X(b_r(X))\leq(\kappa-1)\tau^2.
+  $$ {#eq-kappa-assumption}
+  On average over annotators, the variation of an annotator's bias from item to item is at most $\kappa-1$ times the variance of the offsets.
+
+Unlike in [Part II](#part-2), no distributional assumption is placed on $g_r$.
+
+::: {.callout-note collapse="true" title="What the last assumption means"}
+
+**Item-dependent variation.** An annotator's bias splits into the offset $C_r$, common to all items, and a part that varies across items, so that
+
+$$
+\mathbb E_X\mathbb E_r[b_r(X)^2]=\mathbb E_r\operatorname{Var}_X(b_r(X))+\mathbb E_r[C_r^2].
+$$
+
+With the Gaussian assumption on the logit offset, we have $\mathbb E_r[C_r^2]=\tau^2$, so @eq-kappa-assumption can only hold for $\kappa \geq 1.$ For an extreme case, when $\kappa=1$, each annotator's bias is the same on every item. A larger $\kappa$ allows biases that change across items, such as an annotator who is strict on subtle cases and lenient on obvious ones. Unlike $\tau$, $\kappa$ cannot be estimated by calibration, since averaging logit differences over items leaves only $C_r-C_s$; it must be specified in advance.
+
+:::
+
+### Testing reliability for binary labels
+
+#### Calibrating the scale of the logit offsets
+
+The scale $\tau$ in the assumptions is unknown. As in [Part II](#part-2), it can be calibrated without the latent target, now on the logit scale. By @eq-bernoulli-model, the latent logit cancels in the difference between two annotators:
+
+$$
+\mathbb E_X[\operatorname{logit}\mu_r(X)-\operatorname{logit}\mu_s(X)]=C_r-C_s.
+$$
+
+The calibration uses the surrogate predictors $\widehat\mu_r$ in place of $\mu_r$. By the centered-logit-error assumption, the same identity holds for them,
+
+$$
+\mathbb E_X[\operatorname{logit}\widehat\mu_r(X)-\operatorname{logit}\widehat\mu_s(X)]=C_r-C_s,
+$$
+
+so averaging the differences of their logits over $D_2$ estimates $C_r-C_s$.
+
+The chi-square inversion of [Part II](#part-2) applied to these averages gives an upper confidence bound $U_\tau$ for $\tau$ with $\Pr(\tau\leq U_\tau)\geq1-\gamma+o(1)$ as $n_2\to\infty$.
+
+::: {.callout-note collapse="true" title="Computing the upper bound for the scale"}
+
+With annotator 1 as the baseline, let $\bar W_r$ be the average over $D_2$ of $\operatorname{logit}\widehat\mu_r(X_i)-\operatorname{logit}\widehat\mu_1(X_i)$ for $r=2,\ldots,K$, and let $\widehat\Omega$ be the sample covariance of these logit differences. Under the Gaussian assumption on the offsets, $\operatorname{Var}(C_r-C_1)=2\tau^2$ and $\operatorname{Cov}(C_r-C_1,C_s-C_1)=\tau^2$ for $r\neq s$. With $\bar W=(\bar W_2,\ldots,\bar W_K)^\top$ and a candidate value $t$ of $\tau$, let
+
+$$
+\widehat V(t)=t^2\big(I_{K-1}+\mathbf1\mathbf1^\top\big)+\widehat\Omega/n_2,
 \qquad
-g_{\widehat{\mathcal R}}=\frac1K\sum_r g_r.
+Q(t)=\bar W^\top\widehat V(t)^{-1}\bar W,
 $$
 
-The logit model alone does not establish the surrogate-error assumption. A low prediction loss is useful evidence about a model but is not a proof of that particular moment condition.
-
-### The Bernoulli distortion bound
-
-Let $U_\tau$ be an upper confidence bound for $\tau$ and put $\ell=\log(2/\alpha_g)$. The bound used here is
+and, as in @eq-scale-calibration,
 
 $$
-B_{\mathcal R}^{\mathrm{Bern}}=\min\Bigg\{1,\;\frac{\sqrt3}{36}\kappa U_\tau^2+\sqrt{\frac{\min\{\kappa U_\tau^2,4\}\,\ell}{8K}}+\frac{\ell}{3K}\Bigg\}.
+U_\tau=\sup\{t\geq0:Q(t)\geq q_{\gamma,K-1}\},
+$$
+
+with $U_\tau=0$ when the set is empty.
+
+:::
+
+#### Bounding $g_{\widehat{\mathcal R}}$
+
+Under these assumptions, $|g_{\widehat{\mathcal R}}|$ can be bounded in terms of $\tau$. Replacing $\tau$ by its upper confidence bound $U_\tau$ gives a bound that can be computed from data:
+
+$$
+\begin{aligned}
+|g_{\widehat{\mathcal R}}|\leq B_{\mathcal R}^{\mathrm{Bern}}
+&:=\min\Bigg\{1,\;\frac{\sqrt3}{36}\kappa U_\tau^2+\sqrt{\frac{\min\{\kappa U_\tau^2,4\}\,\log(2/\alpha_g)}{8K}}+\frac{\log(2/\alpha_g)}{3K}\Bigg\}\\
+&\quad\text{w.p. at least }1-\alpha_g-\gamma+o(1).
+\end{aligned}
 $$ {#eq-bernoulli-bound}
 
-The rule remains $L_\Delta>2B_{\mathcal R}^{\mathrm{Bern}}$.
+The 1 in the minimum is the trivial bound $|g_{\widehat{\mathcal R}}|\leq1$. In the second argument, the first term $\frac{\sqrt3}{36}\kappa U_\tau^2$ bounds the mean $\mathbb E_r[g_r]$ created by the curvature of the sigmoid and does not depend on $K$. The other two terms bound the deviation of $g_{\widehat{\mathcal R}}$ from this mean and decrease at the rates $1/\sqrt K$ and $1/K$. More reference annotators therefore lower $B_{\mathcal R}^{\mathrm{Bern}}$, but only down to the first term.
 
-Each term has a distinct role. The first allows for the average shift caused by sigmoid curvature. The square-root term allows for random variation across a finite panel. The final term is the additional bounded-tail correction. The outer minimum uses the trivial bound $|g_{\widehat{\mathcal R}}|\leq1$.
+The factor $\log(2/\alpha_g)$ takes the place of the normal quantile $z_{1-\alpha_g/2}$ in [Part II](#part-2). Without a Gaussian assumption on $g_r$, the average over the $K$ reference annotators must be controlled for every distribution of $g_r$ with the given mean, variance, and range. Bernstein's inequality [@boucheron2013concentration] provides such a guarantee, at the price of the logarithmic factor and the extra $1/K$ term, so the bound is more conservative than in [Part II](#part-2), especially when $K$ is small.
 
-Increasing K reduces the two finite-panel terms. It does not eliminate the curvature term. This is why "use more annotators" is incomplete advice under the logit formulation. The rule can also be conservative: it must accommodate variation and nonlinear distortion without directly observing the target.
+::: {.callout-note collapse="true"}
+## Deriving the bound $B_{\mathcal R}^{\mathrm{Bern}}$
 
-::: {.callout-note collapse="true" title="Where the constants come from"}
-
-The logistic function satisfies
-
-$$
-\sup_u|\sigma'(u)|=\frac14,
-\qquad
-\sup_u|\sigma''(u)|=\frac{\sqrt3}{18}.
-$$
-
-A second-order expansion, together with pointwise centering of $b_r$, bounds the mean reference effect:
+By Taylor's theorem, $\mu_r(X)-\mu^*(X)=\sigma'(\operatorname{logit}\mu^*(X))\,b_r(X)+\tfrac12\sigma''(\xi)\,b_r(X)^2$ for some $\xi$ between $\operatorname{logit}\mu^*(X)$ and $\operatorname{logit}\mu_r(X)$. The first term has mean zero over annotators by the centered logit bias. Since $\sup_u|\sigma''(u)|=\sqrt3/18$, [$|\widehat Y_A(X)-\mu_B(X)|\leq1$]{.ab-new}<!-- was: $|\widehat\mu_A(X)-\mu_B(X)|\leq1$ -->, and
 
 $$
-|\mathbb E_r g_r|\leq\frac{\sqrt3}{36}\kappa\tau^2.
+\mathbb E_X\mathbb E_r[b_r(X)^2]=\mathbb E_r\operatorname{Var}_X(b_r(X))+\mathbb E_r[C_r^2]\leq\kappa\tau^2
 $$
 
-The Lipschitz bound and Jensen's inequality give
+by @eq-kappa-assumption,
 
 $$
-\operatorname{Var}_r(g_r)
-\leq\min\left\{\frac{\kappa\tau^2}{16},\frac14\right\}.
+|\mathbb E_r[g_r]|\leq\frac{\sqrt3}{36}\kappa\tau^2.
 $$
 
-The second bound uses the fact that the support of $g_r$ has diameter at most one. Consequently $|g_r-\mathbb E_rg_r|\leq1$. A bounded-summand Bernstein/sub-gamma bound controls the deviation of the K-reference average by
+Since the sigmoid is $1/4$-Lipschitz, $|\mu_r(X)-\mu^*(X)|\leq|b_r(X)|/4$, and Jensen's inequality gives $$\mathrm{Var}_r(g_r)\leq\mathbb E_r[g_r^2]\leq\kappa\tau^2/16.$$ Moreover, $|g_r-g_s|\leq\mathbb E_X|\mu_r(X)-\mu_s(X)|\leq1$ for any two annotators, so $|g_r-\mathbb E_r[g_r]|\leq1$ and $\operatorname{Var}_r(g_r)\leq1/4$. Bernstein's inequality for the average of the $K$ IID terms $g_r$ then gives, with probability at least $1-\alpha_g$,
 
 $$
-\sqrt{\frac{\min\{\kappa\tau^2,4\}\ell}{8K}}
-+\frac{\ell}{3K}
+|g_{\widehat{\mathcal R}}-\mathbb E_r[g_r]|\leq\sqrt{\frac{\min\{\kappa\tau^2,4\}\,\log(2/\alpha_g)}{8K}}+\frac{\log(2/\alpha_g)}{3K}.
 $$
 
-with failure probability at most $\alpha_g$. On the separate event $\tau\leq U_\tau$, every term is bounded by the corresponding expression in @eq-bernoulli-bound. Combining those events with the main comparison coverage gives the same marginal false-certification statement as @eq-false-certificate, under the Bernoulli assumptions.
-
-This argument uses an intersection of events and a union bound. It does not assert that the reference-tail event has unchanged probability conditional on the scale estimate passing its own check.
+On the event $\tau\leq U_\tau$, which has probability at least $1-\gamma+o(1)$, replacing $\tau$ by $U_\tau$ and using $|g_{\widehat{\mathcal R}}|\leq1$ gives @eq-bernoulli-bound by a union bound.
 
 :::
 
-### Calibrating a logit-bias scale
+#### Establishing the test
 
-Under @eq-bernoulli-model, the latent logit cancels in a pairwise difference:
+<!-- REVISED. Original sentence: On $D_1$, the estimate $\widehat\Delta$ and its standard error $\widehat{\mathrm{se}}(\widehat\Delta)$ are computed as in [Part II](#part-2). The test certifies the evaluation reference for this comparison when -->
 
-$$
-\operatorname{logit}\mu_r(X)-\operatorname{logit}\mu_1(X)
-=b_r(X)-b_1(X).
-$$
+::: {.ab-new}
 
-Averaging over items targets $C_r-C_1$. On $D_2$, we therefore use signed differences of the trained reference logits,
+On $D_1$, the gap is estimated from the decisions,
 
 $$
-W_{i,r}=\operatorname{logit}\widehat\mu_r(X_i)
--\operatorname{logit}\widehat\mu_1(X_i),
-\qquad r=2,\ldots,K.
+\widehat\Delta
+=\frac1{n_1}\sum_{i\in D_1}\Big[\big(\widehat Y_A(X_i)-\widehat\mu_{\mathcal R}(X_i)\big)^2-\big(Y_B(X_i)-\widehat\mu_{\mathcal R}(X_i)\big)^2\Big]
+=\frac1{n_1}\sum_{i\in D_1}\big(\widehat Y_A(X_i)-Y_B(X_i)\big)\big(1-2\widehat\mu_{\mathcal R}(X_i)\big),
 $$
 
-The same covariance structure $I+\mathbf1\mathbf1^\top$ and chi-square inversion in @eq-scale-calibration produce $U_\tau$. Unlike the calibration in [Part II](#part-2), these contrasts are not multiplied by $\widehat\mu_A-Y_B$. Unlike temperature scaling, this step does not fit a scalar temperature to label prediction loss.
-
-The calibration needs accurate out-of-sample logit contrasts. Predictions must lie strictly between zero and one; the item covariance must be estimable; and the signed mean first-stage logit-contrast error must be negligible at the calibration uncertainty scale, or its uncertainty must be accounted for. Probability-scale accuracy alone does not guarantee this near probabilities zero or one. Clipping probabilities also changes the contrasts and must be handled consistently with the calibration assumptions.
-
-These are conditions of the statistical argument, not properties established merely by training a Bernoulli network.
-
-::: {.callout-note collapse="true" title="Numerical inversion"}
-
-With $\widehat\Omega/n_2$ as the contrast noise matrix and $M=I+\mathbf1\mathbf1^\top$, a generalized eigendecomposition yields eigenvectors $v_j$ and eigenvalues $\lambda_j$, normalized so that $v_j^\top Mv_k=\mathbf1\{j=k\}$. Let $a_j=v_j^\top\bar W$. Then
-
-$$
-Q(t)=\sum_j\frac{a_j^2}{\lambda_j+t^2}.
-$$
-
-Our implementation solves a scalar monotone equation in $u=t^2$ at the lower chi-square quantile and sets $U_\tau=\sqrt u$. The scale is nonnegative; boundary and singular cases must follow explicit solver logic. This computational reduction does not replace the assumptions needed to interpret the resulting endpoint as an upper confidence bound.
+with standard error $\widehat{\mathrm{se}}(\widehat\Delta)=s_d/\sqrt{n_1}$, where $s_d$ is the sample standard deviation of the summands.
 
 :::
 
-### Why a controlled binary experiment is useful
-
-The real data provide few reference annotators per comparison, and many clinical aspects are rare. Those conditions can leave little information for a conservative binary procedure. To inspect its behavior with larger panels and balanced synthetic outcomes, we keep the real image embeddings but generate artificial annotator responses.
-
-This is a **semi-synthetic experiment**: the feature geometry comes from real images, while the latent probabilities, annotator effects, and binary labels are generated. The 27 output aspects are artificial. Even though storage columns reuse clinical label names, the synthetic outcomes should be read as Aspect 1 through Aspect 27, not as simulated clinical diagnoses.
-
-The experiment uses 34 synthetic annotators, R01–R34, and 27 aspects. Two identities serve as A and B, and the final analysis compares reference panels of K = 16, 24, and 32 annotators on 1,813 test images. Each annotator has a separately trained 27-output BCE predictor. The data split and generator settings are listed in the collapsed details below.
-
-### The generator: controlled bias with nonlinear item effects
-
-We obtain ten standardized principal-component coordinates $z(x)$ from the full fixed pool of embeddings. For each aspect, a normalized random linear direction gives a score $s_h(x)$. The latent and annotator probabilities are
+The test certifies the evaluation reference for this comparison when
 
 $$
-\mu_h^*(x)=\sigma(a_h+s_h(x)),
-$$
+\boxed{\quad |\widehat\Delta|-t_{n_1-1,1-\alpha_\Delta/2}\,\widehat{\mathrm{se}}(\widehat\Delta)>2B_{\mathcal R}^{\mathrm{Bern}}.\quad}
+$$ {#eq-bernoulli-certificate}
+
+The probability of a false certificate is controlled by the three error levels:
 
 $$
-\mu_{r,h}(x)
-=\sigma(a_h+s_h(x)+C_{r,h}
-+f_{r,h}(x)-\mathbb E_X f_{r,h}(X)).
-$$ {#eq-synthetic-generator}
+\Pr\!\left\{
+\text{certificate issued and }
+\Delta_{\widehat{\mathcal R}}\Delta^*\leq0
+\right\}
+\leq\alpha_\Delta+\alpha_g+\gamma+o(1).
+$$ {#eq-bernoulli-false-certificate}
 
-The centered random network $f_{r,h}$ gives item-dependent variation. The independent offset $C_{r,h}\sim N(0,0.1^2)$ controls average logit bias. Network parameters are sampled once per annotator and aspect and then held fixed across images; an annotator therefore has a stable response function rather than fresh bias noise on every item.
+::: {.callout-note collapse="true" title="Proof of the error bound"}
 
-For each aspect, $a_h$ is chosen so that the **annotator-population mean positive rate**, averaged over the fixed image pool, is 0.5. This does not force each annotator, each item, or every finite label sample to have a positive rate of 0.5. It also does not define the latent target's prevalence to be exactly 0.5.
+The argument is the same as for @eq-false-certificate in [Part II](#part-2), with @eq-bernoulli-bound as the bound on $|g_{\widehat{\mathcal R}}|$. If the reference is not reliable, then $|\Delta_{\widehat{\mathcal R}}|\leq2|g_{\widehat{\mathcal R}}|$. Consider two events:
 
-For this generator, $\tau=0.1$ and $\kappa=2$ is a valid analytic population upper bound. The procedure uses this generator-derived $\kappa$ while estimating the scale through logit contrasts. We do not replace the population bound with a favorable finite-panel estimate.
+- the confidence bound for the gap holds, $|\widehat\Delta|-t_{n_1-1,1-\alpha_\Delta/2}\,\widehat{\mathrm{se}}(\widehat\Delta)\leq|\Delta_{\widehat{\mathcal R}}|$, which has probability at least $1-\alpha_\Delta+o(1)$;
+- the bound @eq-bernoulli-bound holds, $|g_{\widehat{\mathcal R}}|\leq B_{\mathcal R}^{\mathrm{Bern}}$, which has probability at least $1-\alpha_g-\gamma+o(1)$.
 
-::: {.callout-note collapse="true" title="Exact generator settings and diagnostics"}
+On both events,
 
-The generator uses the following settings:
+$$
+|\widehat\Delta|-t_{n_1-1,1-\alpha_\Delta/2}\,\widehat{\mathrm{se}}(\widehat\Delta)\leq|\Delta_{\widehat{\mathcal R}}|\leq2|g_{\widehat{\mathcal R}}|\leq2B_{\mathcal R}^{\mathrm{Bern}},
+$$
+
+so no certificate is issued. A false certificate therefore requires one of the two events to fail, and the union bound gives @eq-bernoulli-false-certificate.
+
+:::
+
+### Semi-synthetic experiment
+
+As in [Part II](#part-2), the real data offer at most four reference annotators per comparison. With so few, the panel terms of $B_{\mathcal R}^{\mathrm{Bern}}$ dominate: with $\alpha_g=0.05$, the term $\log(2/\alpha_g)/(3K)$ alone is 0.31 at $K=4$, so certification would require a gap above 0.6, far larger than the gaps between the model and B. To see how the test behaves with more reference annotators, we keep the real images of VinDr-CXR and generate the labels of many annotators from the logit model @eq-bernoulli-model, with known $\tau$ and $\kappa$.
+
+#### Experimental setting
+
+We generate the labels from the logit model @eq-bernoulli-model in three steps. Each image $x$ is represented by $z(x)\in\mathbb R^{10}$, the first ten principal components of its VinDr-CXR embedding, standardized over the image pool. For each of 27 synthetic aspects $h$:
+
+1. **Latent target.** We set $\mu_h^*(x)=\sigma\big(a_h+s_h(x)\big)$, where $s_h(x)=v_h^\top z(x)$ for a random unit vector $v_h$, and the intercept $a_h$ is chosen so that half of the labels of aspect $h$ are positive.
+2. **Logit bias.** For each annotator $r$, we draw an offset $C_{r,h}\sim N(0,\tau^2)$ with $\tau=0.1$ and a random neural network $f_{r,h}$ of $z(x)$, and set
+   $$
+   b_{r,h}(x)=C_{r,h}+f_{r,h}(x)-\mathbb E_X f_{r,h}(X).
+   $$ {#eq-synthetic-generator}
+   Since $C_{r,h}$ does not depend on the image $x$, $b_{r,h}(X)$ and $f_{r,h}(X)$ have the same variance. We scale the network so that $\mathbb E_r[\mathrm{Var}_X(f_{r,h}(X))]\leq\tau^2$, making @eq-kappa-assumption hold with $\kappa=2$.
+3. **Labels.** By @eq-bernoulli-model, annotator $r$ marks aspect $h$ on image $x$ with probability $\mu_{r,h}(x)=\sigma\big(a_h+s_h(x)+b_{r,h}(x)\big)$, and we draw the labels as independent Bernoulli variables with these probabilities.
+
+The aspects reuse the names of the VinDr-CXR findings. We generate 34 annotators and train a 27-output BCE predictor for each. [A's predictions enter the comparison as decisions @eq-binary-decision, with the threshold fixed before evaluation without using the reference annotators.]{.ab-new}<!-- TODO: state the threshold value or the validation rule used in the rerun. --> Two annotators serve as A and B, and the reference annotators are drawn from the remaining 32 in sets of $K=16, 24,$ and $32$. For each $K$, the test is run in 120 trials on 1,813 test images.
+
+As in [Part II](#part-2), we split the total error budget $\alpha=\alpha_\Delta+\alpha_g+\gamma$, which bounds the probability of a false certificate by @eq-bernoulli-false-certificate, equally among the three bounds, setting $\alpha_\Delta=\alpha_g=\gamma=\alpha/3$, and run the test at $\alpha=0.05$, 0.10, and 0.20.
+
+<!-- ::: {.callout-note collapse="true" title="Generator details"}
 
 | Component | Setting |
 |---|---|
 | Feature pool | 5,438 unique real images with 1,376-dimensional embeddings |
-| Image split | 2,887 training, 738 validation/calibration ($D_2$), 1,813 test ($D_1$) |
 | PCA features | 10 coordinates; full-pool standardization with population variance convention (`ddof=0`) |
 | Aspect direction | Gaussian vector in 10 dimensions, normalized to unit length |
 | Random network | $f_{r,h}(z)=W_{2,rh}\tanh(W_{1,rh}z+b_{1,rh})$ |
@@ -185,26 +253,11 @@ The generator uses the following settings:
 | Labels | Conditionally independent Bernoulli draws given the generated probabilities |
 | Panel and seed | 34 annotators, 27 aspects, master seed 42 |
 
-Independent, mean-zero output weights and bounded hidden activations give $\mathbb E_r f_{r,h}(x)=0$ and $\mathbb E_r\operatorname{Var}_X f_{r,h}(X)\leq\tau^2$. Centering over items makes $\mathbb E_X b_{r,h}(X)=C_{r,h}$ exactly. Hence
+::: -->
 
-$$
-\mathbb E_r\mathbb E_X b_{r,h}(X)^2
-=\mathbb E_r C_{r,h}^2
-+\mathbb E_r\operatorname{Var}_X f_{r,h}(X)
-\leq2\tau^2,
-$$
+#### Result
 
-which justifies $\kappa=2$.
-
-The recorded maximum error in solving the population positive-rate constraint is $4.32\times10^{-6}$. The finite-panel expected positive rate is 0.500315 and the realized label rate is 0.500210. The recorded mean latent probability is 0.499999; this is a diagnostic outcome, not the quantity constrained by the intercept equation. Empirical finite-panel bias ratios range from 1.2387 to 1.3108, with mean 1.2730; these diagnostics do not replace the analytic population bound.
-
-The distribution of X used for generator centering and oracle moments is uniform over the full fixed pool. PCA is also fitted on that pool. This is a fixed-pool simulation, not an evaluation of an inductively learned feature transformation on unseen images. The inherited disjoint $D_1$ and $D_2$ subsets are an experimental analogue of the item-sampling theory; they do not by themselves establish its IID assumptions.
-
-:::
-
-### Results: reference panel size and the certification threshold
-
-In the synthetic Bernoulli experiment, the reported rejection percentages vary sharply with the number of references and the probability setting. At prob = 0.10, the average across 27 aspects is 0% with 16 references, 18.8% with 24, and 100% with 32. The intermediate panel size is especially revealing: with 24 references the average rises from 0.2% at prob = 0.05 to 91% at prob = 0.20. Use the controls below to see how this pattern varies by finding.
+For each aspect, $K$, and $\alpha$, we call the fraction of the 120 trials in which the test certifies the reference the *certification rate*. A certification means that the $K$ reference annotators form a reliable reference for the model–human comparison between $\widehat\mu_A$ and $Y_B$ on that aspect. @fig-synthetic-bernoulli-task2 shows that the certification rate increases with $K$. At $\alpha=0.10$, it is 0% with $K=16$ and 100% with $K=32$ for every aspect, while with $K=24$ it ranges from 0% to 100% across aspects. For example, for Aortic enlargement at $\alpha=0.10$, the certification rate is 0% with $K=16$, 63.3% with $K=24$, and 100% with $K=32$. More reference annotators shrink the two panel terms of $B_{\mathcal R}^{\mathrm{Bern}}$, so smaller gaps between the model and B can be certified.
 
 ::: {#fig-synthetic-bernoulli-task2}
 
@@ -212,36 +265,28 @@ In the synthetic Bernoulli experiment, the reported rejection percentages vary s
 
 ::: {.ab-widget data-widget="synthetic-task2"}
 
-| Reference panel | Average rejection percentage at prob = .10 |
+| Reference annotators | Certification rate for Aortic enlargement at $\alpha=0.10$ |
 |---|---:|
-| 16 references | 0% |
-| 24 references | 18.8% |
-| 32 references | 100% |
+| *K* = 16 | 0% |
+| *K* = 24 | 63.3% |
+| *K* = 32 | 100% |
 
-Average rejection percentage across 27 aspects. Each aspect contributes 120 trial decisions per K and prob setting. Trial configurations are shared across aspects.
-
-:::
+Percentage of the 120 trials in which the test certifies the reference.
 
 :::
 
-How certification depends on the size of the reference panel. Average rejection percentage across the 27 aspects, by number of references. Each aspect contributes 120 trial decisions per panel size and prob setting; trial configurations are shared across aspects.
+:::
+
+How often the test certifies the reference. Certification rate for the selected aspect by number of reference annotators $K$, at the selected total error budget $\alpha$.
 
 :::
 
-[Explore Lung Opacity](#result-synthetic-bernoulli-task2){.ab-instance-link data-target="synthetic-task2" data-aspect="Lung Opacity"}
+#### Result for each aspect
 
-The across-aspect average also hides heterogeneity. For Lung Opacity at prob = 0.10, the rejection percentage is 0% with both 16 and 24 references, while it is 100% with 32. At prob = 0.20, the percentage with 24 references reaches 98.3% (118/120).
-
-Each panel size and prob setting summarizes 120 trial configurations. These configurations reuse the same generated annotator panel, trained models, and image pool; they are not 120 independently regenerated datasets. `prob` is the setting recorded in the implementation. Unlike in [Part II](#part-2), the synthetic result summary does not record how `prob` is split across the three error terms, so we do not interpret it as a total error budget.
-
-::: {.callout-note collapse="true" title="Compare all 27 aspects"}
+The table below lists the certification rate of every aspect at a chosen total error budget, with one column for each $K$. Selecting a row shows that aspect in @fig-synthetic-bernoulli-task2.
 
 ::: {.ab-widget data-widget="synthetic-all-aspects"}
-This table requires JavaScript. The full results are in the CSV below.
-:::
-
-[Download the synthetic rejection summary (CSV)](data/task2-bernoulli/final/rejection-summary-K16-K24-K32.csv) · [Generation metadata (JSON)](data/task2-bernoulli/generation-meta.json) · [Generation config (JSON)](data/task2-bernoulli/generation-config.json)
-
+This interactive table requires JavaScript.
 :::
 
 ### Empirical power
@@ -249,13 +294,3 @@ This table requires JavaScript. The full results are in the CSV below.
 Empirical power results based on the known synthetic ground truth will be added here.
 
 <!-- [[PENDING:SYNTHETIC_TASK2_POWER]] -->
-
-
-
-### What the synthetic experiment does—and does not—validate
-
-The construction controls the latent probabilities, the average logit-bias distribution, and a population bound on item-dependent bias variation. This makes it possible to study how the implemented rule behaves when substantially more annotators are available.
-
-The reported results show a strong change in certification frequency with panel size under these settings. They do not, by themselves, estimate the probability of an incorrect certificate. Although the generator makes oracle quantities available in principle, our result summary does not report oracle sign agreement, false-certification rates, or coverage. We therefore do not claim that those properties have been empirically verified.
-
-Nor does a controlled label generator guarantee that trained surrogates satisfy the required error moment or logit-contrast accuracy. The use of the validation split for calibration also needs to be interpreted together with any checkpoint-selection or probability-calibration steps that used that split. Those first-stage conditions remain distinct from the generator's known $\tau$ and $\kappa$.

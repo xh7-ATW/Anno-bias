@@ -27,6 +27,44 @@
   });
 })();
 
+// Keep collapsible callouts open across a page reload: remember which ones are
+// open when the page unloads, and reopen them (without animation) on load.
+// A callout is identified by its title and its position among same-titled ones.
+(function () {
+  var KEY = "ab-open-callouts";
+  function keys() {
+    var seen = {};
+    return Array.prototype.map.call(document.querySelectorAll(".callout"), function (c) {
+      var t = c.querySelector(".callout-title-container");
+      var title = t ? t.textContent.replace(/^\s*Note\s*/, "").trim() : "";
+      seen[title] = (seen[title] || 0) + 1;
+      return { el: c, key: title + "#" + seen[title] };
+    });
+  }
+  function save() {
+    var open = keys().filter(function (k) {
+      var body = k.el.querySelector(".callout-collapse");
+      return body && body.classList.contains("show");
+    }).map(function (k) { return k.key; });
+    try { sessionStorage.setItem(KEY, JSON.stringify(open)); } catch (e) {}
+  }
+  var open = [];
+  try { open = JSON.parse(sessionStorage.getItem(KEY) || "[]"); } catch (e) {}
+  if (open.length) {
+    keys().forEach(function (k) {
+      if (open.indexOf(k.key) === -1) return;
+      var body = k.el.querySelector(".callout-collapse");
+      var header = k.el.querySelector(".callout-header");
+      if (!body || !header) return;
+      body.classList.add("show");
+      header.classList.remove("collapsed");
+      header.setAttribute("aria-expanded", "true");
+    });
+  }
+  window.addEventListener("pagehide", save);
+  window.addEventListener("beforeunload", save);
+})();
+
 (function () {
   "use strict";
 
@@ -54,6 +92,10 @@
     if (x === 0) return "0";
     var e = Math.floor(Math.log10(Math.abs(x)));
     return minus(x.toFixed(Math.max(0, n - 1 - e)));
+  }
+
+  function sciGap(x) {
+    return x === 0 ? "0" : sci(x);
   }
 
   function sci(x) {
@@ -216,12 +258,12 @@
     });
   }
 
-  function heatLegend() {
+  function heatLegend(label) {
     var stops = HEAT_STOPS.map(function (c, i) {
       return "rgb(" + c.join(",") + ") " + (i / (HEAT_STOPS.length - 1) * 100) + "%";
     }).join(", ");
     return h("div", { class: "ab-heat-legend", "aria-hidden": "true" }, [
-      h("span", { class: "ab-heat-legend-label", text: "Rejection percentage" }),
+      h("span", { class: "ab-heat-legend-label", text: label || "Rejection percentage" }),
       h("span", { class: "ab-heat-legend-scale" }, [
         h("span", { class: "ab-heat-legend-bar", style: "background: linear-gradient(to right, " + stops + ")" }),
         h("span", { class: "ab-heat-legend-ticks" }, [h("span", { text: "0%" }), h("span", { text: "50%" }), h("span", { text: "100%" })]),
@@ -487,7 +529,7 @@
     }
 
     function describe(g) {
-      return g.K + " references, total error budget " + probLabel(g.prob) + ": " + g.hits + " of " + g.n +
+      return "K = " + g.K + ", total error budget " + probLabel(g.prob) + ": " + g.hits + " of " + g.n +
         " configurations certified (" + fmtPct(g.pct) + ").";
     }
 
@@ -497,9 +539,7 @@
         h("tr", null, [h("th", { scope: "col" })].concat(probs.map(function (p) { return h("th", { scope: "col", text: probLabel(p) }); }))),
       ]);
       var body = h("tbody", null, Ks.map(function (K) {
-        return h("tr", null, [h("th", { scope: "row" }, [
-          h("span", { class: "ab-long", text: K + " references" }), h("span", { class: "ab-short", text: K + " refs" }),
-        ])].concat(probs.map(function (p) {
+        return h("tr", null, [h("th", { scope: "row", html: "<i>K</i> = " + K })].concat(probs.map(function (p) {
           var g = cellFor(K, p);
           var key = K + "|" + p;
           var btn = h("button", {
@@ -527,7 +567,7 @@
 
     container.innerHTML = "";
     container.appendChild(tableHost);
-    container.appendChild(heatLegend());
+    container.appendChild(heatLegend("Certification rate"));
     container.appendChild(detail);
     render();
   }
@@ -575,15 +615,8 @@
       probField.sync(state.prob);
       var panels = panelsForPair();
       if (!state.selected && panels.length) state.selected = panels[panels.length - 1].refs;
-      var maxGap = Math.max.apply(null, panels.map(function (p) { return p.absDelta; }));
-      var e = maxGap > 0 && maxGap < 1 ? Math.floor(Math.log10(maxGap)) : 0;
-      var k = Math.pow(10, e);
-      var unit = unitLabel(e);
-      var u = unit ? " (" + unit + ")" : "";
-
       var certified = panels.filter(function (p) { return p.byProb[state.prob].cert; }).length;
-      summary.textContent = certified + " of " + panels.length + " reference panels are certified (✓) at total error budget " + probLabel(state.prob) + "." +
-        (e ? " Gaps are in units of 10" + supExp(e) + "." : "");
+      summary.textContent = certified + " of " + panels.length + " reference panels are certified (✓) at total error budget " + probLabel(state.prob) + ".";
 
       var trs = [];
       var lastK = null;
@@ -597,8 +630,8 @@
         var cls = (r.cert ? "is-cert" : "") + (p.refs === state.selected ? " is-selected" : "");
         var tr = h("tr", { class: cls || null, "aria-label": p.refs + (r.cert ? ": certified" : ": not certified") }, [
           cell((r.cert ? "✓ " : "") + p.refs),
-          cell(sigN(p.absDelta / k, 3), true),
-          cell(sigN(r.bound / k, 3), true),
+          cell(sciGap(p.absDelta), true),
+          cell(sciGap(r.bound), true),
         ]);
         makeSelectable(tr, function () { state.selected = p.refs; render(); });
         trs.push(tr);
@@ -618,13 +651,11 @@
       var r = sel.byProb[state.prob];
       var head = "Panel " + sel.refs + " at total error budget " + probLabel(state.prob) + ": ";
       if (r.cert) {
-        var who = sel.delta < 0 ? "model" : "human";
-        explain.textContent = head + "the observed gap " + sigN(sel.absDelta / k, 3) + " exceeds the required " +
-          sigN(r.bound / k, 3) + u + ", so the procedure certifies the comparison. The " + who + " has the lower loss against this reference, so " +
-          "the certified direction favors the " + who + ", under this loss comparison and the stated assumptions.";
+        explain.textContent = head + "the observed gap " + sciGap(sel.absDelta) + " exceeds the required gap " +
+          sciGap(r.bound) + ", so the reference is certified.";
       } else {
-        explain.textContent = head + "the observed gap " + sigN(sel.absDelta / k, 3) + " does not exceed the required " +
-          sigN(r.bound / k, 3) + u + ", so the procedure reaches no conclusion for this panel.";
+        explain.textContent = head + "the observed gap " + sciGap(sel.absDelta) + " does not exceed the required gap " +
+          sciGap(r.bound) + ", so the reference is not certified.";
       }
     }
 
@@ -637,13 +668,13 @@
     var syn = D.synthetic;
     var Ks = ["16", "24", "32"];
     var probs = [{ value: "0.05", label: "0.05" }, { value: "0.10", label: "0.10" }, { value: "0.20", label: "0.20" }];
-    var state = { aspect: "avg", prob: "0.10", selectedK: null };
+    var state = { aspect: String(syn.aspects[0].index), prob: "0.10", selectedK: null };
 
     var aspectField = selectField("Aspect",
-      [{ value: "avg", label: "Average across 27 aspects" }].concat(syn.aspects.map(function (a) { return { value: String(a.index), label: a.name }; })),
+      syn.aspects.map(function (a) { return { value: String(a.index), label: a.name }; }),
       state.aspect,
       function (v) { state.aspect = v; render(); });
-    var probField = segmentedField("prob", probs, state.prob,
+    var probField = segmentedField("Total error budget", probs, state.prob,
       function (v) { state.prob = v; render(); });
 
     var lead = h("p", { class: "ab-lead", "aria-live": "polite" });
@@ -679,8 +710,8 @@
 
     function describe(K) {
       var v = valueFor(state.aspect, K);
-      return aspectName(state.aspect) + ", " + K + " references at prob = " + probLabel(state.prob) + ": " + fmtInt(v.r) + " of " +
-        fmtInt(v.n) + " " + v.unit + " rejected (" + fmtPct(v.pct) + ").";
+      return aspectName(state.aspect) + ", K = " + K + " at total error budget " + probLabel(state.prob) + ": " + fmtInt(v.r) + " of " +
+        fmtInt(v.n) + " " + v.unit + " certified (" + fmtPct(v.pct) + ").";
     }
 
     function render() {
@@ -688,14 +719,14 @@
       probField.sync(state.prob);
       var vals = Ks.map(function (K) { return valueFor(state.aspect, K); });
 
-      lead.textContent = aspectName(state.aspect) + " at prob = " + probLabel(state.prob) + ": the rejection percentage is " +
-        fmtPct(vals[0].pct) + " with 16 references, " + fmtPct(vals[1].pct) + " with 24, and " + fmtPct(vals[2].pct) + " with 32.";
+      lead.textContent = aspectName(state.aspect) + " at total error budget " + probLabel(state.prob) + ": the certification rate is " +
+        fmtPct(vals[0].pct) + " with K = 16, " + fmtPct(vals[1].pct) + " with K = 24, and " + fmtPct(vals[2].pct) + " with K = 32.";
 
       barsHost.innerHTML = "";
       Ks.forEach(function (K, i) {
         var v = vals[i];
         var row = h("div", { class: "ab-bar-row" + (state.selectedK === K ? " is-selected" : ""), title: describe(K), "aria-label": describe(K) }, [
-          h("div", { class: "ab-bar-label", text: K + " references" }),
+          h("div", { class: "ab-bar-label", html: "<i>K</i> = " + K }),
           h("div", { class: "ab-bar-track" }, [h("span", { class: "ab-bar-fill", style: "width:" + Math.min(100, Math.max(0, v.pct)) + "%" })]),
           h("div", { class: "ab-bar-value", text: fmtPct(v.pct) }),
         ]);
@@ -709,9 +740,7 @@
       barsHost.appendChild(h("div", { class: "ab-bar-row ab-bar-axis", "aria-hidden": "true" }, [h("div", { class: "ab-bar-label" }), axis, h("div", { class: "ab-bar-value" })]));
 
       detail.textContent = state.selectedK ? describe(state.selectedK) : "Select a bar to see its count.";
-      caption.textContent = state.aspect === "avg"
-        ? "Equal-weight average of the 27 aspect percentages. Each aspect contributes 120 trials per panel size; the trials are shared across aspects."
-        : "Percentage of 120 trials per panel size in which the test rejects.";
+      caption.textContent = "Percentage of the 120 trials in which the test certifies the reference.";
 
       renderAll();
     }
@@ -719,7 +748,7 @@
     function renderAll() {
       if (!allHost) return;
       var head = h("thead", null, [h("tr", null, [h("th", { scope: "col", text: "Aspect" })].concat(Ks.map(function (K) {
-        return h("th", { scope: "col" }, [h("span", { class: "ab-long", text: K + " references" }), h("span", { class: "ab-short", text: K })]);
+        return h("th", { scope: "col", html: "<i>K</i> = " + K });
       })))]);
       var body = h("tbody", null, syn.aspects.map(function (a) {
         var key = String(a.index);
@@ -728,7 +757,7 @@
           return h("td", null, [h("span", {
             class: "ab-heat-cell",
             style: "background:" + heatColor(c.pct) + ";color:" + heatText(c.pct),
-            title: a.name + ", " + K + " references: " + c.r + " of " + c.n + " trials rejected",
+            title: a.name + ", K = " + K + ": " + c.r + " of " + c.n + " trials certified",
             text: fmtPct(c.pct),
           })]);
         })));
@@ -740,9 +769,9 @@
         return tr;
       }));
       allHost.innerHTML = "";
-      allHost.appendChild(h("p", { class: "ab-lead", text: "Rejection percentage by aspect at prob = " + probLabel(state.prob) + "; columns are the number of references, 120 trials per cell. Select a row to show it above." }));
+      allHost.appendChild(h("p", { class: "ab-lead", text: "Certification rate by aspect at total error budget " + probLabel(state.prob) + "; 120 trials per cell. Select a row to show it in Figure 4." }));
       allHost.appendChild(h("div", { class: "ab-scroll" }, [h("table", { class: "ab-heatmap ab-heatmap-aspects" }, [head, body])]));
-      allHost.appendChild(heatLegend());
+      allHost.appendChild(heatLegend("Certification rate"));
     }
 
     render();
