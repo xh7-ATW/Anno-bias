@@ -2,7 +2,7 @@
 
 [Part II](#part-2) works with the aggregate score. This part turns to the 27 binary labels and asks the same question for each finding: when is a panel of reference annotators reliable for a model–human comparison?
 
-### Why binary labels need a new bound
+### The comparison for binary labels
 
 Since the analysis applies to each finding separately, we omit the finding index $h$ and recall the modeling of $Y_r$:
 
@@ -14,14 +14,13 @@ $$ {#eq-bernoulli-model}
 
 with centered logit bias, i.e., $\mathbb E_r[b_r(x)]=0$.
 
-::: {.ab-new}
-
-As in [I.2](#binary-labels), the model enters the comparison through its binary decision $\widehat Y_A=\mathbf 1\{\widehat\mu_A\geq t\}$ (@eq-binary-decision). The threshold is fixed before evaluation without using the reference annotators, so the decision does not depend on which annotators form the reference. B's label is binary as well, while both references are probability functions: the latent target $\mu^*$ and the evaluation reference $\widehat\mu_{\mathcal R}$. The gaps are therefore squared-loss comparisons of two binary outputs against a probability,
+<!-- As in [I.2](#binary-labels), the model enters the comparison through its binary decision $\widehat Y_A=\mathbf 1\{\widehat\mu_A\geq t\}$ (@eq-binary-decision), with the threshold fixed before evaluation without using the reference annotators.  -->
+Because the labels $Y_r$ are generated with noise, no 0-1 label can be regarded as the true label of an item. Therefore, we choose the latent target $\mu^*$ as the ``just'' reference and test the reliability of the probability-valued evaluation reference $\widehat\mu_{\mathcal R}$.
+The gaps are therefore squared-loss comparisons of two binary outputs against a probability,
 
 $$
 \Delta^*
-=\mathbb E_{X,\epsilon}\big[(\widehat Y_A(X)-\mu^*(X))^2-(Y_B(X)-\mu^*(X))^2\big]
-=\mathbb E_{X,\epsilon}\big[(\widehat Y_A(X)-Y_B(X))(1-2\mu^*(X))\big],
+=\mathbb E_{X,\epsilon}\big[(\widehat Y_A(X)-\mu^*(X))^2-(Y_B(X)-\mu^*(X))^2\big],
 $$
 
 and $\Delta_{\widehat{\mathcal R}}$ is the same with $\widehat\mu_{\mathcal R}$ in place of $\mu^*$. The relation @eq-reference-distortion holds with $\widehat Y_A$ in place of $\widehat\mu_A$, now with
@@ -30,7 +29,7 @@ $$
 g_{\widehat{\mathcal R}}=\mathbb E_{X,\epsilon}\big[(\widehat\mu_{\mathcal R}(X)-\mu^*(X))(\widehat Y_A(X)-Y_B(X))\big].
 $$
 
-:::
+### Why binary labels need a new bound
 
 <!-- REVISED: g_r now uses the decision. Original text:
 
@@ -42,25 +41,30 @@ $$
 
 -->
 
-The test @eq-general-certificate of [Part II](#part-2) carries over to this model; what must be derived anew is the bound $B_{\mathcal R}$ on $|g_{\widehat{\mathcal R}}|$. [Under the probability-scale error assumption below, $g_{\widehat{\mathcal R}}$ is the average over the reference annotators of]{.ab-new}
+As in [Part II](#part-2), write $\widehat\mu_r=\mu_r+\widehat e_r$ with learning error $\widehat e_r$. Since the model now enters the comparison through its decision, the independence assumption of [Part II](#part-2) is stated with $\widehat Y_A$ in place of $\widehat\mu_A$, i.e.,
 
-::: {.ab-new}
+- **Independence:** $\widehat e_r(X)\perp\big(\widehat Y_A(X)-Y_B(X)\big)$. The error of a surrogate predictor on an item is unrelated to the difference between the model's decision and B's label on that item.
+
+With $\widehat e_{\mathcal R}=K^{-1}\sum_{r\in\mathcal R}\widehat e_r$ and the centered-error assumption as in [Part II](#challenges-from-sparse-labels), it gives the orthogonality condition
+
+$$
+\mathbb E_{X,\epsilon}\big[\widehat e_{\mathcal R}(X)\,(\widehat Y_A(X)-Y_B(X))\big]=0,
+$$ {#eq-bernoulli-orthogonality}
+
+which is derived in the same way as @eq-reference-orthogonality.
+
+As we carry the test of [Part II](#part-2) carries over to this model, what must be derived anew is the bound $B_{\mathcal R}$ on $|g_{\widehat{\mathcal R}}|$. By @eq-bernoulli-orthogonality, $g_{\widehat{\mathcal R}}$ is the average over the reference annotators of
 
 $$
 g_r=\mathbb E_X[(\mu_r(X)-\mu^*(X))(\widehat Y_A(X)-\mu_B(X))].
 $$
 
-:::
-
-However, the Gaussian assumption in [Part II](#part-2), that the $g_{\widehat r}$ are IID draws from $N(0,\tau_g^2)$, does not suit here, for two reasons. First, because the sigmoid is nonlinear, centered logit bias does not center the probabilities: $\mathbb E_r[\mu_r(x)]$ differs from $\mu^*(x)$ in general, so $\mathbb E_r[g_r]\neq0$. Second, because probabilities lie in $[0,1]$, $g_r$ must be bounded. Therefore we place the Gaussian assumption on the logit scale and bound $g_{\widehat{\mathcal R}}$ directly.
+However, the Gaussian assumption in [Part II](#part-2), that the $g_{\widehat r}$ are IID draws from $N(0,\tau_g^2)$, does not suit here for two reasons. First, because the sigmoid is nonlinear, centered logit bias does not center the probabilities: $\mathbb E_r[\mu_r(x)]$ differs from $\mu^*(x)$ in general, so $\mathbb E_r[g_r]\neq0$. Second, because probabilities lie in $[0,1]$, $g_r$ must be bounded. The bound @eq-gaussian-bound therefore does not carry over, and we need a new bound on $|g_{\widehat{\mathcal R}}|$.
 
 ### Assumptions for binary labels
 
-<!-- REVISED. Original sentence: We make three additional assumptions on the surrogate predictors $\widehat \mu_r(X)$ and the bias function $b_r(X)$ of reference annotators. -->
+[We make three further assumptions, on the surrogate predictors $\widehat\mu_r$ and the bias functions $b_r$ of the reference annotators.]{.ab-new}
 
-[We make four assumptions on the surrogate predictors $\widehat\mu_r$ and the bias functions $b_r$ of the reference annotators.]{.ab-new}
-
-- [**Probability-scale error:** for every $r\in\mathcal R$, $\mathbb E_X[\widehat e_r(X)]=0$ and $\widehat e_r(X)\perp\big(\widehat Y_A(X)-Y_B(X)\big)$, where $\widehat e_r=\widehat\mu_r-\mu_r$. These are the assumptions of [Part II](#part-2) with the decision $\widehat Y_A$ in place of $\widehat\mu_A$. They give $\mathbb E_{X,\epsilon}\big[\widehat e_{\mathcal R}(X)(\widehat Y_A(X)-Y_B(X))\big]=0$, so the learning errors drop out of $g_{\widehat{\mathcal R}}$.]{.ab-new}
 
 - **Centered logit error:** $\mathbb E_X[\operatorname{logit}\widehat\mu_r(X)-\operatorname{logit}\mu_r(X)]=0$. Averaged over items, the logit of the surrogate predictor neither overestimates nor underestimates the logit of annotator $r$'s mean score.
 - **Gaussian logit offsets:** $C_r:=\mathbb E_X[b_r(X)]$ satisfies $C_r\overset{\mathrm{IID}}{\sim}N(0,\tau^2)$. The offset $C_r$ is annotator $r$'s logit bias averaged over items, and $\tau$ measures how much these offsets differ across annotators.
@@ -175,8 +179,7 @@ On $D_1$, the gap is estimated from the decisions,
 
 $$
 \widehat\Delta
-=\frac1{n_1}\sum_{i\in D_1}\Big[\big(\widehat Y_A(X_i)-\widehat\mu_{\mathcal R}(X_i)\big)^2-\big(Y_B(X_i)-\widehat\mu_{\mathcal R}(X_i)\big)^2\Big]
-=\frac1{n_1}\sum_{i\in D_1}\big(\widehat Y_A(X_i)-Y_B(X_i)\big)\big(1-2\widehat\mu_{\mathcal R}(X_i)\big),
+=\frac1{n_1}\sum_{i\in D_1}\Big[\big(\widehat Y_A(X_i)-\widehat\mu_{\mathcal R}(X_i)\big)^2-\big(Y_B(X_i)-\widehat\mu_{\mathcal R}(X_i)\big)^2\Big],
 $$
 
 with standard error $\widehat{\mathrm{se}}(\widehat\Delta)=s_d/\sqrt{n_1}$, where $s_d$ is the sample standard deviation of the summands.

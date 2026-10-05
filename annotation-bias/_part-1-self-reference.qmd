@@ -262,7 +262,7 @@ Y_{r,h}(x)\sim\operatorname{Bernoulli}(\mu_{r,h}(x)),
 =\operatorname{logit}\mu_h^*(x)+b_{r,h}(x),
 $$
 
-so annotator bias acts on the logit scale. The Bernoulli model already makes $\mu_{r,h}(x)$ annotator $r$'s probability of marking finding $h$ on item $x$, so no separate noise assumption is needed. We make the following assumptions:
+so annotator bias acts on the logit scale. The Bernoulli model, which follows the annotator-specific labeling construction of @raykar2010learning, already makes $\mu_{r,h}(x)$ annotator $r$'s probability of marking finding $h$ on item $x$, so no separate noise assumption is needed. We make the following assumptions:
 
 - **Centered logit bias:** $\mathbb E_r[b_{r,h}(x)]=0$. Unlike in [I.1](#aggregate-score), this does not make the average probability $\mathbb E_r[\mu_{r,h}(x)]$ equal to $\mu_h^*(x)$; this gap becomes a central challenge for [Part III](#part-3).
 - **Conditional independence:** for $(r,x)\neq(s,x')$, the labels $Y_{r,h}(x)$ and $Y_{s,h}(x')$ are independent conditional on the annotator identities $r$ and $s$.
