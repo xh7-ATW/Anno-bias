@@ -19,6 +19,8 @@ DATA = ROOT / "data"
 OUTPUT_PATHS = {
     "SCALAR_TASK_I_SUMMARY": "task1-scalar/summary.csv",
     "REAL_BERNOULLI_TASK_I_SUMMARY": "task1-bernoulli/summary.csv",
+    "REAL_BERNOULLI_TASK_I_THRESHOLDED_META": "task1-bernoulli/thresholded-meta.json",
+    "REAL_BERNOULLI_TASK_I_THRESHOLDS": "task1-bernoulli/thresholds.csv",
     "REAL_BERNOULLI_TASK_I_TEMPERATURE_CALIBRATION_JSON": "task1-bernoulli/calibration/temperature.json",
     "REAL_BERNOULLI_TASK_I_TEMPERATURE_CALIBRATION_SUMMARY": "task1-bernoulli/calibration/calibration-summary.csv",
     "REAL_BERNOULLI_TASK_I_TEMPERATURE_CALIBRATION_PER_ASPECT": "task1-bernoulli/calibration/calibration-aspects.csv",
@@ -34,9 +36,18 @@ OUTPUT_PATHS = {
 def read_blocks():
     text = DUMP.read_text(encoding="utf-8")
     blocks = {}
-    pattern = re.compile(r"^## ([A-Z0-9_]+)\n.*?^```(?:csv|json)\n(.*?)^```", re.S | re.M)
-    for name, body in pattern.findall(text):
-        blocks[name] = body
+    # A block is "## NAME", an opening ```csv/```json fence, and the next ``` (the closing
+    # fence may follow the last line directly, as in "}```").
+    for m in re.finditer(r"^## ([A-Z0-9_]+)\n", text, re.M):
+        name = m.group(1)
+        if name in blocks:
+            continue
+        opening = re.compile(r"^```(?:csv|json)\n", re.M).search(text, m.end())
+        if not opening:
+            continue
+        close = text.index("```", opening.end())
+        body = text[opening.end():close]
+        blocks[name] = body if body.endswith("\n") else body + "\n"
     missing = set(OUTPUT_PATHS) - set(blocks)
     if missing:
         raise SystemExit(f"missing blocks in dump: {sorted(missing)}")
@@ -189,16 +200,17 @@ def check(payload):
     expect("scalar R8/R9/R10 S", s[("R8", "R9", "R10")]["S"], 0.0008508403, 1e-9)
     expect("scalar R10/R9/R8 p", s[("R10", "R9", "R8")]["p"], 0.9999952, 1e-7)
 
-    mean_rows = payload["bernoulli"]["rows"]["-1"]
-    if sum(1 for r in mean_rows if r["reject"]["0.05"]) != 4:
-        failures.append("bernoulli mean: expected 4 rejections at .05")
-    if any(r["dSelf"] >= 0 or r["dExt"] >= 0 for r in mean_rows):
-        failures.append("bernoulli mean: expected all loss gaps negative")
+    # Thresholded (0-1 loss) Bernoulli Task I, validation-selected thresholds.
+    per_aspect = [r for i, rs in payload["bernoulli"]["rows"].items() if i != "-1" for r in rs]
+    for alpha, want in (("0.01", 12), ("0.05", 22), ("0.1", 32)):
+        got = sum(1 for r in per_aspect if r["reject"][alpha])
+        if got != want:
+            failures.append(f"bernoulli rejections at {alpha}: got {got}, want {want}")
     atel = next(a["index"] for a in payload["bernoulli"]["aspects"] if a["name"] == "Atelectasis")
     r = next(x for x in payload["bernoulli"]["rows"][str(atel)] if (x["A"], x["B"], x["C"]) == ("R8", "R9", "R10"))
-    expect("atelectasis self gap", r["dSelf"], -0.0061689631, 1e-9)
-    expect("atelectasis ext gap", r["dExt"], 0.0006133821, 1e-9)
-    expect("atelectasis p", r["p"], 0.02949355, 1e-8)
+    expect("atelectasis self gap", r["dSelf"], -0.006, 1e-9)
+    expect("atelectasis ext gap", r["dExt"], 0.002, 1e-9)
+    expect("atelectasis p", r["p"], 0.01692506948, 1e-9)
 
     grid = {(c["K"], c["prob"]): c for c in payload["continuous"]["byKProb"]}
     if (grid[(4, "0.2")]["hits"], grid[(4, "0.2")]["n"]) != (14, 30):

@@ -262,42 +262,11 @@ Y_{r,h}(x)\sim\operatorname{Bernoulli}(\mu_{r,h}(x)),
 =\operatorname{logit}\mu_h^*(x)+b_{r,h}(x),
 $$
 
-so annotator bias acts on the logit scale. The Bernoulli model already makes $\mu_{r,h}(x)$ annotator $r$'s probability of marking finding $h$ on item $x$, so no separate noise assumption is needed; the label noise is $\epsilon_{r,h,x}=Y_{r,h}(x)-\mu_{r,h}(x)$. We make the following assumptions:
+so annotator bias acts on the logit scale. The Bernoulli model already makes $\mu_{r,h}(x)$ annotator $r$'s probability of marking finding $h$ on item $x$, so no separate noise assumption is needed. We make the following assumptions:
 
-- **Centered logit bias:** $\mathbb E_r[b_{r,h}(x)]=0$. Unlike in [I.1](#aggregate-score), this does not make the average probability $\mathbb E_r[\mu_{r,h}(x)]$ equal to $\mu_h^*(x)$; this gap becomes central in [Part III](#part-3).
+- **Centered logit bias:** $\mathbb E_r[b_{r,h}(x)]=0$. Unlike in [I.1](#aggregate-score), this does not make the average probability $\mathbb E_r[\mu_{r,h}(x)]$ equal to $\mu_h^*(x)$; this gap becomes a central challenge for [Part III](#part-3).
 - **Conditional independence:** for $(r,x)\neq(s,x')$, the labels $Y_{r,h}(x)$ and $Y_{s,h}(x')$ are independent conditional on the annotator identities $r$ and $s$.
 
-<!-- REVISED (Bernoulli handoff, 3 Oct 2026): the model now enters the comparison through a binary decision. Original text:
-
-For the self-reference effect, the results of [I.1](#aggregate-score) carry over finding by finding. The formula in @eq-self-reference holds with the MSE computed on binary labels, that is, the Brier score:
-
-$$
-S_{A,C,h}
-=2\mathbb E_{X,\epsilon}[(Y_{A,h}(X)-Y_{C,h}(X))(\widehat\mu_{A,h}(X)-Y_{B,h}(X))].
-$$
-
-For binary labels, we train the model $\widehat\mu_{A,h}$ with binary cross-entropy (BCE). Like MSE, BCE also targets the annotator's conditional probability $\mu_{A,h}$ [@hastie2009elements], so the trained model again carries A's bias. The average result in @eq-average-self-reference holds with $\mu_{A,h}-\mathbb E_r[\mu_{r,h}]$ in place of $b_A$; its first term becomes $2\mathbb E_X\operatorname{Var}_r\{\mu_{r,h}(X)\}$, the between-annotator variance of the probabilities.
-
-::: {.callout-note collapse="true" title="Deriving the average effect for binary labels"}
-
-With $\widehat e_{A,h}=\widehat\mu_{A,h}-\mu_{A,h}$, the label noise drops out as in [I.1](#aggregate-score), so
-
-$$
-\frac{S_{A,C,h}}{2}
-=\mathbb E_X\big[(\mu_{A,h}(X)-\mu_{C,h}(X))(\mu_{A,h}(X)-\mu_{B,h}(X)+\widehat e_{A,h}(X))\big].
-$$
-
-The common term $\mathbb E_r[\mu_{r,h}(X)]$ cancels in every difference, so each $\mu_{r,h}$ can be replaced by its deviation $\mu_{r,h}-\mathbb E_r[\mu_{r,h}]$. These deviations have mean zero over annotators, as the biases $b_r$ do in [I.1](#aggregate-score). Averaging over A, B, and C in the same way therefore gives
-
-$$
-\mathbb E_{A,B,C}[S_{A,C,h}]
-=2\mathbb E_X\operatorname{Var}_r\{\mu_{r,h}(X)\}
-+2\mathbb E_A\mathbb E_X\big[(\mu_{A,h}(X)-\mathbb E_r[\mu_{r,h}(X)])\,\widehat e_{A,h}(X)\big].
-$$
-
-:::
-
--->
 
 For binary labels, we train the model $\widehat\mu_{A,h}$ with binary cross-entropy (BCE). Like MSE, BCE also targets the annotator's conditional probability $\mu_{A,h}$ [@hastie2009elements], so the trained model again carries A's bias. Like a radiologist, the model enters the comparison through a binary decision,
 
@@ -305,7 +274,7 @@ $$
 \widehat Y_{A,h}(x)=\mathbf 1\{\widehat\mu_{A,h}(x)\geq t_h\},
 $$ {#eq-binary-decision}
 
-where the threshold $t_h$ is fixed before evaluation, on validation data independent of the evaluation images. Since $\widehat Y_{A,h}$, $Y_{B,h}$, and $Y_{R,h}$ all take values in $\{0,1\}$, the squared loss in @eq-comparison-gap coincides with the 0-1 loss, and the comparison gap is the difference between the misclassification rates of the model and of B, both measured against $Y_{R,h}$:
+where the threshold $t_h$ is chosen on validation data independent of the evaluation images and fixed before evaluation. Since $\widehat Y_{A,h}$, $Y_{B,h}$, and $Y_{R,h}$ all take values in $\{0,1\}$, the squared loss in @eq-comparison-gap coincides with the 0-1 loss, and the comparison gap is the difference between the misclassification rates of the model and of B, both measured against $Y_{R,h}$:
 
 $$
 \Delta_{R,h}
@@ -314,24 +283,24 @@ $$
 
 #### The self-reference effect for binary labels
 
-For each finding, the self-reference effect is then $S_{A,C,h}=\Delta_{C,h}-\Delta_{A,h}$, the difference between the gaps under the external annotator C and the training annotator A. As in @eq-self-reference, it reduces to
+For each finding, the self-reference effect is then $S_{A,C,h}:=\Delta_{C,h}-\Delta_{A,h}$, the difference between the gaps under the external annotator C and the training annotator A. As in @eq-self-reference, it reduces to
 
 $$
 S_{A,C,h}
 =2\mathbb E_{X,\epsilon}[(Y_{A,h}(X)-Y_{C,h}(X))(\widehat Y_{A,h}(X)-Y_{B,h}(X))],
 $$
 
-and the test of [I.1](#aggregate-score) applies unchanged, with the paired summands formed from $\widehat Y_{A,h}$.
+and the test @eq-task1-test applies unchanged, with $\widehat Y_{A,h}$ in place of $\widehat\mu_A$ in the paired terms $Z_i$.
 
-Consider a special case where the threshold $t_h$ is common to all annotators. Drawing A, B, and C independently from the population as in [I.1](#aggregate-score), the average over annotators replaces @eq-average-self-reference:
-
+Consider a special case where the threshold $t_h$ is common to all annotators. Drawing A, B, and C independently from the population as in [I.1](#aggregate-score), the average over annotators replaces @eq-average-self-reference
+by
 $$
 \mathbb E_{A,B,C}[S_{A,C,h}]
 =2\mathbb E_X\big[\operatorname{Cov}_A\big(\mu_{A,h},\mathbf 1\{\mu_{A,h}\geq t_h\}\big)\big]
 +2\mathbb E_X\big[\operatorname{Cov}_A\big(\mu_{A,h},\mathbf 1\{\widehat\mu_{A,h}\geq t_h\}-\mathbf 1\{\mu_{A,h}\geq t_h\}\big)\big].
 $$ {#eq-binary-average-self-reference}
 
-The first term does not depend on the fitted model and is nonnegative because the decision $\mathbf{1}\{\mu_{A,h}\ge t_h\}$ is nondecreasing in $\mu_{A,h}$. It is positive if, for at least one image, $\mu_{r,h}$ lies above $t_h$ for some annotators and below $t_h$ for others. The second term captures the alignment between annotator $A$'s probability $\mu_{A,h}$ and the model's decision error. It can have either sign, and its magnitude diminishes as the model fits annotator $A$ more closely. Thus, for annotators drawn randomly from the population, self-reference is expected to make the model appear better than an independent reference would, with the magnitude of this effect determined by how much the annotators' probabilities vary across the threshold $t_h$.
+The first term does not depend on the fitted model and is nonnegative because the decision $\mathbf{1}\{\mu_{A,h}\ge t_h\}$ is nondecreasing in $\mu_{A,h}$^[It is positive if, for at least one image, $\mu_{r,h}$ lies above $t_h$ for some annotators and below $t_h$ for others]. The covariance term in the second term captures the alignment between an annotator's probability $\mu_{A,h}$ and the model's decision error, which can have either sign. Moreover, its magnitude diminishes as the model fits annotator $A$ more closely. Thus, for annotators drawn randomly from the population, self-reference is expected to make the model appear better than an independent reference would, with the magnitude of this effect determined by how much the annotators' probabilities vary across the threshold $t_h$.
 
 ::: {.callout-note collapse="true" title="Deriving the average effect for binary labels"}
 
@@ -364,23 +333,13 @@ in absolute value.
 
 #### Experiment
 
-The experiment uses the same radiologists, image embedding, and 1,500 evaluation images as [I.1](#aggregate-score). Each radiologist's model is now an MLP with 27 sigmoid outputs, one per finding, trained with BCE. <!-- REVISED: temperature scaling removed, since a monotone rescaling of the probabilities does not change the decisions. Original sentence: We also check the calibration of the predicted probabilities with temperature scaling [@guo2017calibration], fitted on each radiologist's validation data held out from training. -->Each output is turned into a decision as in @eq-binary-decision, with a threshold chosen on the radiologist's own validation data and fixed before evaluation.
+The experiment uses the same radiologists, image embedding, and 1,500 evaluation images as [I.1](#aggregate-score). Each radiologist's model is now an MLP with 27 sigmoid outputs, one per finding, trained with BCE. Each output is turned into a decision as in @eq-binary-decision, with a threshold chosen on the radiologist's own validation data and fixed before evaluation.
 For each of the six comparisons, we apply the test of [I.1](#aggregate-score) to each finding separately.
 <!-- [[VERIFY:real-bernoulli-task1-probability-version]] The supplied Task I summary does not record whether the test used raw or temperature-scaled probabilities. -->
 
 <!-- REVISED: temperature-scaling callout removed (decisions do not depend on it).
 
-::: {.callout-note collapse="true" title="Temperature scaling"}
 
-For the model trained on radiologist A, let $z_{A,h}(x)$ be the logit of its output for finding $h$, so that $\widehat\mu_{A,h}(x)=\sigma(z_{A,h}(x))$ with $\sigma$ the sigmoid function. Temperature scaling replaces this probability by
-
-$$
-\widehat\mu_{A,h}^{\,T}(x)=\sigma\big(z_{A,h}(x)/T_A\big),
-$$
-
-where one temperature $T_A>0$ is shared by all 27 outputs and chosen to minimize the BCE on A's validation data, so that the predicted probabilities match the observed frequencies of positive labels more closely. A temperature above 1 pulls the probabilities toward 0.5, and one below 1 pushes them toward 0 or 1. The fitted temperatures are $T_{R8}\approx1.07$, $T_{R9}\approx1.03$, and $T_{R10}\approx1.00$.
-
-:::
 
 -->
 
@@ -392,9 +351,7 @@ The 27 findings are: Aortic enlargement; Atelectasis; Calcification; Cardiomegal
 
 #### Result: self-reference effects by finding
 
-[(TO BE CHANGED)]{.ab-new}
-
-Of the 162 finding-level tests (27 findings × 6 comparisons), 14, 29, and 38 are significant at the 0.01, 0.05, and 0.10 levels, against about 2, 8, and 16 expected by chance^[If there were no self-reference effect, each test would reject with probability at most its level $\alpha$, so the expected number of rejections among the 162 tests is at most $162\alpha$.]. Select a finding in @fig-real-bernoulli-task1 to see its results.
+Of the 138 finding-level tests with at least one image on which the two references disagree ($Y_{A,h}\neq Y_{C,h}$) and the compared pair disagree $(\widehat Y_{A,h}\neq Y_{B,h})$^[There are altogether 27 findings × 6 comparisons = 162 tests. In 24 tests, on every evaluation image either A and C give the same label or the model's decision equals B's label, so the test does not apply.], 12, 22, and 32 tests are significant at the 0.01, 0.05, and 0.10 error levels, against about 1, 7, and 14 expected by chance^[If there were no self-reference effect, each test would reject with probability at most its level $\alpha$, so the expected number of rejections among the 138 tests is at most $138\alpha$.]. Select a finding in @fig-real-bernoulli-task1 to see its results.
 
 ::: {#fig-real-bernoulli-task1}
 
@@ -406,16 +363,16 @@ Atelectasis: a positive self-reference effect is detected in 1 of 6 comparisons 
 
 | Model | Human R8 | Human R9 | Human R10 |
 |---|---:|---:|---:|
-| R8-trained model | — | 0.0295 (p < 0.05) | 0.121 |
-| R9-trained model | 0.271 | — | 0.865 |
-| R10-trained model | 0.721 | 0.936 | — |
+| R8-trained model | — | 0.017 (p < 0.05) | 0.103 |
+| R9-trained model | 0.159 | — | 0.897 |
+| R10-trained model | 0.5 | 0.841 | — |
 
 :::
 
 :::
 
-Self-reference test for each finding. One-sided p-values over 1,500 test images; unadjusted nominal tests. In each comparison the external reference is the remaining radiologist.
+Self-reference test for each finding. One-sided p-values over 1,500 test images; unadjusted nominal tests. In each comparison the external reference is the remaining radiologist. "No variation" marks tests in which every paired term $Z_i$ is zero.
 
 :::
 
-A significant effect in @fig-real-bernoulli-task1 means that self-reference shifts the comparison toward the model. Such shifts occur far more often than chance would produce and for all three training radiologists, so the self-reference effect found for the aggregate score in [I.1](#aggregate-score) persists when the radiologists are compared finding by finding.
+A significant effect in @fig-real-bernoulli-task1 means that self-reference shifts the comparison toward the model. Such shifts occur far more often than chance would produce, so the self-reference effect found for the aggregate score in [I.1](#aggregate-score) persists when the radiologists are compared finding by finding.

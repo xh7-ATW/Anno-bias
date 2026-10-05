@@ -109,12 +109,13 @@
   }
 
   // p-values: small ones in scientific notation, ones very close to 1 as "≈ 1",
-  // otherwise three significant digits.
+  // otherwise at most three decimal places (0.0808 -> "0.081", 0.500 -> "0.5").
+  // Values below 0.01 use scientific notation.
   function fmtP(p) {
     if (p === null || p === undefined) return "Not available";
-    if (p < 0.001) return sci(p);
+    if (p < 0.01) return sci(p);
     if (p > 0.999) return "≈ 1";
-    return p.toPrecision(3);
+    return String(parseFloat(p.toFixed(3)));
   }
 
   var CLEAR_HINT = " Select the cell again to clear.";
@@ -125,6 +126,12 @@
     return s.charAt(0) === "≈" ? "p " + s : "p = " + s;
   }
 
+  // Cell text: a p-value, or "No variation" when every paired term Z_i is zero
+  // (the statistic and its standard error are both 0, so the test does not apply).
+  function pCellText(p) {
+    return p === null || p === undefined ? "No variation" : fmtP(p);
+  }
+
   function thresholdText(p, alpha) {
     return p < alpha ? "p < " + alpha.toFixed(2) : "p ≥ " + alpha.toFixed(2);
   }
@@ -132,7 +139,7 @@
   // The "(p < α)" line under a significant p-value; omitted otherwise
   // (the cell keeps its height through CSS and the value is centred vertically).
   function thresholdSpan(p, alpha) {
-    return p < alpha ? h("span", { class: "ab-matrix-thr", text: "(" + thresholdText(p, alpha) + ")" }) : null;
+    return p !== null && p !== undefined && p < alpha ? h("span", { class: "ab-matrix-thr", text: "(" + thresholdText(p, alpha) + ")" }) : null;
   }
 
   function fmtPct(x) {
@@ -325,7 +332,7 @@
           title: describeCell(r, alpha, alphaKey),
           "aria-label": describeCell(r, alpha, alphaKey),
         }, [
-          h("span", { class: "ab-matrix-p", text: fmtP(r.p) }),
+          h("span", { class: "ab-matrix-p", text: pCellText(r.p) }),
           thresholdSpan(r.p, alpha),
         ]);
         makeSelectable(td, function () { onSelect(key); });
@@ -349,7 +356,7 @@
               h("span", { class: "ab-matrix-thr", text: "external reference " + r.C }),
             ]),
             h("span", { class: "ab-matrix-item-p" }, [
-              h("span", { class: "ab-matrix-p", text: fmtP(r.p) }),
+              h("span", { class: "ab-matrix-p", text: pCellText(r.p) }),
               thresholdSpan(r.p, alpha),
             ]),
           ]);
@@ -362,6 +369,10 @@
   }
 
   function describeCell(r, alpha, alphaKey) {
+    if (r.p === null || r.p === undefined) {
+      return r.A + "-trained model vs human " + r.B + ", external reference " + r.C +
+        ": every paired term Z_i is zero, so the test does not apply.";
+    }
     return r.A + "-trained model vs human " + r.B + ", external reference " + r.C + ": " + pEquals(r.p) +
       (r.p > 0.999 ? "" : " (" + thresholdText(r.p, alpha) + ")") +
       ", positive self-reference effect " + (r.reject[alphaKey] ? "detected." : "not detected.");

@@ -99,8 +99,8 @@ The practical lesson is to specify the reference, the comparison target, and the
 
 ```{=html}
 <script src="article-tabs.js?v=2"></script>
-<script src="data/results-data.js?v=2"></script>
-<script src="results.js?v=21"></script>
+<script src="data/results-data.js?v=3"></script>
+<script src="results.js?v=26"></script>
 <script>
 // Local preview only: reload when the rendered page changes on disk.
 // Quarto's own preview reload does not fire reliably here; this checks the
