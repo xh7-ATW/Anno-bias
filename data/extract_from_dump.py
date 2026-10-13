@@ -1,5 +1,7 @@
 """Split references/REQUESTED_CSV_JSON_DATA_DUMP_FOR_AGENT.md into the data/
 files and build data/results-data.js for the interactive result components.
+Part III (semi-synthetic Bernoulli Task II) comes from the official per-finding
+results in references/part_iii_per_finding_detailed.csv instead of the dump.
 
 Run from the project root:  python data/extract_from_dump.py
 """
@@ -15,6 +17,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DUMP = ROOT / "references" / "REQUESTED_CSV_JSON_DATA_DUMP_FOR_AGENT.md"
 DATA = ROOT / "data"
+SYNTH_CSV = ROOT / "references" / "part_iii_per_finding_detailed.csv"
+SYNTH_SETTING = ROOT / "references" / "SYNTHETIC_BERNOULLI_OFFICIAL_GENERATION_SETTING.md"
+# total error budgets shown in Part III, as CSV value -> display key
+SYNTH_ALPHAS = {"0.1": "0.10", "0.15": "0.15", "0.2": "0.20"}
 
 OUTPUT_PATHS = {
     "SCALAR_TASK_I_SUMMARY": "task1-scalar/summary.csv",
@@ -27,9 +33,6 @@ OUTPUT_PATHS = {
     "CONTINUOUS_TASK_II_EXHAUSTIVE_SUMMARY": "task2-scalar/configurations.csv",
     "CONTINUOUS_TASK_II_TRUE_RATE_BY_K_PROB": "task2-scalar/by-k-prob.csv",
     "CONTINUOUS_TASK_II_METADATA": "task2-scalar/meta.json",
-    "SYNTHETIC_BERNOULLI_TASK_II_FINAL_K16_K24_K32_SUMMARY": "task2-bernoulli/final/rejection-summary-K16-K24-K32.csv",
-    "SYNTHETIC_GENERATION_METADATA": "task2-bernoulli/generation-meta.json",
-    "SYNTHETIC_GENERATION_CONFIG": "task2-bernoulli/generation-config.json",
 }
 
 
@@ -96,7 +99,7 @@ def build_payload(blocks):
     bern = defaultdict(dict)
     for r in rows(blocks["REAL_BERNOULLI_TASK_I_SUMMARY"]):
         idx = int(r["aspect_index"])
-        name = "Average across 27 aspects" if r["scale"] == "mean_over_aspects" else r["aspect"]
+        name = "Average across 27 findings" if r["scale"] == "mean_over_aspects" else r["aspect"]
         bern_aspects[idx] = name
         key = f'{r["A_model"]}|{r["B_human"]}|{r["C_external_ref"]}'
         entry = bern[idx].setdefault(key, {
@@ -160,15 +163,20 @@ def build_payload(blocks):
         }
     cont_meta = json.loads(blocks["CONTINUOUS_TASK_II_METADATA"])
 
-    # Synthetic Bernoulli Task II.
+    # Semi-synthetic Bernoulli Task II (official per-finding results).
     synth_aspects = {}
     synth = defaultdict(lambda: defaultdict(dict))
-    for r in rows(blocks["SYNTHETIC_BERNOULLI_TASK_II_FINAL_K16_K24_K32_SUMMARY"]):
+    for r in csv.DictReader(io.StringIO(SYNTH_CSV.read_text(encoding="utf-8"))):
+        if r["alpha_total"] not in SYNTH_ALPHAS:
+            continue
         idx = int(r["aspect_index"])
         synth_aspects[idx] = r["aspect"]
-        synth[idx][r["K"]][r["prob"]] = {
-            "n": int(r["n_tests"]), "r": int(r["n_rejections"]),
-            "pct": num(r["rejection_percent"]),
+        n, k = int(r["n_trials"]), int(r["n_rejections"])
+        synth[idx][r["K"]][SYNTH_ALPHAS[r["alpha_total"]]] = {
+            "n": n, "r": k, "pct": 100.0 * k / n,
+            "gap": num(r["mean_abs_Delta_hat_ref"]),
+            "rhs": num(r["mean_rhs_distortion_bound"]),
+            "U": num(r["mean_U_tau_gamma"]),
         }
 
     return {
@@ -220,14 +228,16 @@ def check(payload):
     expect("continuous default pair |delta|", cfg["absDelta"], 0.0003145104, 1e-10)
     expect("continuous default pair bound", cfg["byProb"]["0.05"]["bound"], 0.0002655212, 1e-10)
 
+    # Pooled counts quoted in the official setting note and in Part III.
     cells = payload["synthetic"]["cells"]
-    for K, want in (("16", 0.0), ("24", 18.77), ("32", 100.0)):
-        avg = sum(cells[i][K]["0.10"]["pct"] for i in cells) / len(cells)
-        expect(f"synthetic avg K{K} prob .10", round(avg, 2), want, 1e-9)
-    lung = next(a["index"] for a in payload["synthetic"]["aspects"] if a["name"] == "Lung Opacity")
-    c = cells[str(lung)]["24"]["0.20"]
-    if (c["r"], c["n"]) != (118, 120):
-        failures.append("synthetic Lung Opacity K24 prob .20: expected 118/120")
+    for K, want in (("16", 87), ("24", 415), ("32", 1222)):
+        got = sum(cells[i][K]["0.20"]["r"] for i in cells)
+        if got != want:
+            failures.append(f"synthetic pooled K{K} alpha .20: got {got}, want {want}")
+    rib = next(a["index"] for a in payload["synthetic"]["aspects"] if a["name"] == "Rib fracture")
+    c = cells[str(rib)]["32"]["0.20"]
+    if (c["r"], c["n"]) != (115, 120):
+        failures.append("synthetic Rib fracture K32 alpha .20: expected 115/120")
 
     return failures
 
@@ -238,6 +248,11 @@ def main():
         path = DATA / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(blocks[name], encoding="utf-8")
+
+    synth_dir = DATA / "task2-bernoulli"
+    synth_dir.mkdir(parents=True, exist_ok=True)
+    (synth_dir / "per-finding.csv").write_text(SYNTH_CSV.read_text(encoding="utf-8"), encoding="utf-8")
+    (synth_dir / "generation-setting.md").write_text(SYNTH_SETTING.read_text(encoding="utf-8"), encoding="utf-8")
 
     payload = build_payload(blocks)
     failures = check(payload)

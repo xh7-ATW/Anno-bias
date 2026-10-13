@@ -39,9 +39,9 @@ When annotators' judgments leave consistent patterns in the labels they provide,
 
 Such systematic bias in annotation can affect the performance comparisons between trained models and human annotators (hereafter *model–human comparisons*). These comparisons have attracted considerable attention in medical imaging [@liu2019comparison; @nagendran2020artificial; @ahmad2023machine]. For example, in chest X-ray interpretation, @irvin2019chexpert reports that its model outperformed individual radiologists on several findings, while @wu2020comparison reports higher specificity and precision for an AI model than for radiology residents. Both studies used reference labels established by panels of specialists through majority voting or consensus. However, the former study did not report whether the training annotators overlapped with the reference experts, while in the latter, one of the reference experts was also involved in training. Now we use a simple model to explain how annotation bias can affect model–human comparisons under this overlap.
 
-Denote the label given by an annotator $i$ on object $x$ as $Y_i(x)$ and the corresponding latent truth as $Y^*(x)$, we write
+Denote the label given by an annotator $i$ on object $x$ as $Y_i(x)$ and the corresponding latent truth as $Y^*(x),$ we write
 $$Y_i(x) = Y^*(x) + b_i(x) + \epsilon_{i,x},$$
-where $b_i(x)$ is the systematic bias of annotator $i$ and $\epsilon_{i,x}$ is the noise. Suppose a model $\widehat Y_A$ is trained on annotator A and compared with annotator B. Assume the reference is again the annotator A and the comparison is on dataset $\mathcal{D}$. Then the model–human comparison is between 
+where $b_i(x)$ is the systematic bias of annotator $i$ and $\epsilon_{i,x}$ is the noise. Suppose a model $\widehat Y_A$ is trained on annotator A and compared with annotator B. Assume the reference is again the annotator A and the comparison is on dataset $\mathcal{D}.$ Then the model–human comparison is between 
 $\sum_{x \in \mathcal{D}} || \widehat Y_A (x) - Y_A (x) ||$ and $\sum_{x \in \mathcal{D}} || Y_B (x) - Y_A (x) ||,$
 which can also be written as
 $$ \sum_{x \in \mathcal{D}} || \widehat e_A (x) - \epsilon_{A,x} || \quad \mathrm{versus} \quad  \sum_{x \in \mathcal{D}} ||\big(b_B(x) - b_A(x)\big) + \epsilon_{B,x} - \epsilon_{A,x}||.$$ {#eq-intro-self-ref}
@@ -84,13 +84,13 @@ The article proceeds in three parts. [Part I](#part-1) formulates annotation bia
 
 ## Conclusion {#conclusion}
 
-A model–human comparison is also a comparison of how the model and human relate to an evaluation reference. When the model learns one annotator's systematic tendencies, using that annotator as the reference can change its apparent advantage. Task I makes that shift measurable. In the real scalar experiment, four of six configurations show a significant positive self-reference effect, while the two configurations trained on R10 have negative estimated effects. For the 27 binary findings, the effect is significant at nominal α = 0.05 in 29 of the 162 finding-level tests, against about 8 expected by chance.
+A model–human comparison asks whether a model trained on human annotations or a human annotator agrees better with reference labels. In subjective tasks, including the chest X-ray interpretation considered here, these reference labels come from annotators with their own systematic biases. When the model is trained on one annotator's labels and evaluated against the same annotator, the model's error no longer contains that annotator's bias while the human's error still does, so the comparison favors the model. [Part I](#part-1) shows that this self-reference effect is nonnegative on average over annotators, and our tests detect it in the VinDr-CXR annotations.
 
-Task II asks a different question: can the reference preserve the direction of the comparison against a specified latent target? The central idea is to compare a lower bound on the strength of the observed gap with an upper bound on the change caused by replacing the latent target with the reference. Trained annotator models make this approach usable with sparse labeling overlap, while introducing assumptions about their own errors. The continuous procedure is a Gaussian working-model analysis; its observed certification frequency should be read in that light.
+Evaluating against independent reference annotators avoids self-reference, but such a panel has its own biases. In [Part II](#part-2), for the aggregate scores, we call a panel reliable for a comparison if it names the same better performer as the latent target, and we develop a test that certifies reliability without observing the latent target. The test compares the estimated gap with a bound on how much replacing the latent target by the panel can change the gap, calibrated from how the reference annotators differ from one another, and it controls the probability of a false certification. Each reference annotator enters the test through a surrogate predictor trained on their own labels, so the reference annotators need not label the evaluation images, which reduces the labeling the test requires. On VinDr-CXR, larger panels are certified more often.
 
-Binary labels reveal why averaging alone is not enough. Centering annotator biases on the logit scale need not center their probabilities. Larger panels reduce random fluctuations, but a curvature-related component remains in the bound. The semi-synthetic results show how additional references can nevertheless make the certification rule substantially less restrictive in the evaluated settings.
+For binary labels, annotator bias acts on the logit scale, so averaging reference annotators leaves a shift away from the latent target that does not vanish as the panel grows. In [Part III](#part-3), we derive a new bound that accounts for this shift and study the test on semi-synthetic labels for VinDr-CXR images with many annotators. The test certifies a panel more often as it grows, and certification is harder for findings on which the trained reference models differ more.
 
-The practical lesson is to specify the reference, the comparison target, and the uncertainty together. A detected self-reference effect is not a verdict about which annotator is correct. A certificate is a comparison-specific conclusion under explicit assumptions. Keeping those distinctions visible makes claims about model–human performance easier to interpret and harder to overstate.
+What our framework can establish is constrained by the available data. The test is more powerful for continuous scores, as in [Part II](#part-2), than for binary labels, as in [Part III](#part-3), and data with a verified ground truth would show how often it certifies reliable panels in real tasks. Currently, however, the framework requires at least two annotators, A and B, who label the same sufficiently large set of items, which is not easy to obtain. In addition, the bound for binary labels relies only on the available data and the Gaussian assumption on the logit offsets, so it is conservative. In tasks with more structure, for example where $g_r$ follows a known distribution, a tighter bound could give the test higher power. Beyond model–human comparisons, a natural next step is to extend the framework to more general evaluations of trained models against annotator-based references, such as comparisons between two models.
 
 ## References {.unnumbered}
 
@@ -99,8 +99,8 @@ The practical lesson is to specify the reference, the comparison target, and the
 
 ```{=html}
 <script src="article-tabs.js?v=2"></script>
-<script src="data/results-data.js?v=3"></script>
-<script src="results.js?v=26"></script>
+<script src="data/results-data.js?v=5"></script>
+<script src="results.js?v=31"></script>
 <script>
 // Local preview only: reload when the rendered page changes on disk.
 // Quarto's own preview reload does not fire reliably here; this checks the

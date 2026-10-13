@@ -30,13 +30,19 @@
 // Keep collapsible callouts open across a page reload: remember which ones are
 // open when the page unloads, and reopen them (without animation) on load.
 // A callout is identified by its title and its position among same-titled ones.
+// Math in the title is left out, since MathJax rewrites it after load.
 (function () {
   var KEY = "ab-open-callouts";
   function keys() {
     var seen = {};
     return Array.prototype.map.call(document.querySelectorAll(".callout"), function (c) {
       var t = c.querySelector(".callout-title-container");
-      var title = t ? t.textContent.replace(/^\s*Note\s*/, "").trim() : "";
+      var title = "";
+      if (t) {
+        var copy = t.cloneNode(true);
+        copy.querySelectorAll(".math, mjx-container, .screen-reader-only").forEach(function (m) { m.remove(); });
+        title = copy.textContent.replace(/\s+/g, " ").trim();
+      }
       seen[title] = (seen[title] || 0) + 1;
       return { el: c, key: title + "#" + seen[title] };
     });
@@ -678,10 +684,11 @@
   function initSynthetic(container, allHost) {
     var syn = D.synthetic;
     var Ks = ["16", "24", "32"];
-    var probs = [{ value: "0.05", label: "0.05" }, { value: "0.10", label: "0.10" }, { value: "0.20", label: "0.20" }];
-    var state = { aspect: String(syn.aspects[0].index), prob: "0.10", selectedK: null };
+    var probs = [{ value: "0.10", label: "0.10" }, { value: "0.15", label: "0.15" }, { value: "0.20", label: "0.20" }];
+    var rib = syn.aspects.filter(function (a) { return a.name === "Rib fracture"; })[0] || syn.aspects[0];
+    var state = { aspect: String(rib.index), prob: "0.20", selectedK: null };
 
-    var aspectField = selectField("Aspect",
+    var aspectField = selectField("Finding",
       syn.aspects.map(function (a) { return { value: String(a.index), label: a.name }; }),
       state.aspect,
       function (v) { state.aspect = v; render(); });
@@ -701,7 +708,7 @@
     container.appendChild(caption);
 
     function aspectName(aspect) {
-      if (aspect === "avg") return "Average across 27 aspects";
+      if (aspect === "avg") return "Average across 27 findings";
       var a = syn.aspects.filter(function (x) { return String(x.index) === aspect; })[0];
       return a ? a.name : "";
     }
@@ -713,7 +720,7 @@
           var c = syn.cells[i][K][state.prob];
           sumPct += c.pct; r += c.r; n += c.n; count += 1;
         });
-        return { pct: sumPct / count, r: r, n: n, unit: "aspect–trial decisions" };
+        return { pct: sumPct / count, r: r, n: n, unit: "finding–trial decisions" };
       }
       var c = syn.cells[aspect][K][state.prob];
       return { pct: c.pct, r: c.r, n: c.n, unit: "trials" };
@@ -721,8 +728,13 @@
 
     function describe(K) {
       var v = valueFor(state.aspect, K);
-      return aspectName(state.aspect) + ", K = " + K + " at total error budget " + probLabel(state.prob) + ": " + fmtInt(v.r) + " of " +
+      var text = aspectName(state.aspect) + ", K = " + K + " at total error budget " + probLabel(state.prob) + ": " + fmtInt(v.r) + " of " +
         fmtInt(v.n) + " " + v.unit + " certified (" + fmtPct(v.pct) + ").";
+      if (state.aspect !== "avg") {
+        var c = syn.cells[state.aspect][K][state.prob];
+        text += " On average over the trials, the estimated gap is " + c.gap.toFixed(3) + " and the right side of the certification rule is " + c.rhs.toFixed(3) + ".";
+      }
+      return text;
     }
 
     function render() {
@@ -758,7 +770,7 @@
 
     function renderAll() {
       if (!allHost) return;
-      var head = h("thead", null, [h("tr", null, [h("th", { scope: "col", text: "Aspect" })].concat(Ks.map(function (K) {
+      var head = h("thead", null, [h("tr", null, [h("th", { scope: "col", text: "Finding" })].concat(Ks.map(function (K) {
         return h("th", { scope: "col", html: "<i>K</i> = " + K });
       })))]);
       var body = h("tbody", null, syn.aspects.map(function (a) {
@@ -780,7 +792,6 @@
         return tr;
       }));
       allHost.innerHTML = "";
-      allHost.appendChild(h("p", { class: "ab-lead", text: "Certification rate by aspect at total error budget " + probLabel(state.prob) + "; 120 trials per cell. Select a row to show it in Figure 4." }));
       allHost.appendChild(h("div", { class: "ab-scroll" }, [h("table", { class: "ab-heatmap ab-heatmap-aspects" }, [head, body])]));
       allHost.appendChild(heatLegend("Certification rate"));
     }

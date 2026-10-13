@@ -1008,3 +1008,21 @@ li > span[id^="eq-"] > .math.display > mjx-container.MathJax {
 .ab-new mjx-container {
   color: #c62828;
 }
+
+/* Numbered list labelled "Step 1.", "Step 2.", ... */
+.step-list > ol {
+  list-style: none;
+  counter-reset: step;
+  padding-left: 0;
+}
+.step-list > ol > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 4.2em;
+}
+.step-list > ol > li::before {
+  content: "Step " counter(step) ".";
+  position: absolute;
+  left: 0;
+  font-weight: 600;
+}

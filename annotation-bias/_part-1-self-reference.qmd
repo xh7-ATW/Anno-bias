@@ -2,16 +2,16 @@
 
 ### Data: VinDr-CXR
 
-Throughout the analysis we use VinDr-CXR [@nguyen2022vindr; @PhysioNet-vindr-cxr-1.0.0], a public dataset of 18,000 chest X-rays annotated by 17 radiologists. For each image, a radiologist gives 28 yes/no labels, coded 1 for present and 0 for absent: 22 local findings, such as Atelectasis, Cardiomegaly, and Pleural effusion, and 6 global diagnoses, namely Lung tumor, Pneumonia, Tuberculosis, COPD, Other diseases, and No finding. We set aside No finding and keep the other 27 labels. Write $Y_{r,h}\in\{0,1\}$ for radiologist $r$'s label on finding $h=1,\ldots,27$.
+Throughout the analysis we use VinDr-CXR [@nguyen2022vindr; @PhysioNet-vindr-cxr-1.0.0], a public dataset of $18{,}000$ chest X-rays annotated by $17$ radiologists. For each image, a radiologist gives $28$ yes/no labels, coded $1$ for present and $0$ for absent: $22$ local findings, such as Atelectasis, Cardiomegaly, and Pleural effusion, and $6$ global diagnoses, namely Lung tumor, Pneumonia, Tuberculosis, COPD, Other diseases, and No finding. We set aside No finding and keep the other $27$ labels. Write $Y_{r,h}\in\{0,1\}$ for radiologist $r$'s label on finding $h=1,\ldots,27.$
 
 We look at these labels in two ways:
 
-- **Aggregate score.** The average of a radiologist's 27 labels, $Y_r^{\mathrm{avg}}=\frac{1}{27}\sum_{h=1}^{27}Y_{r,h}$, is the share of findings that the radiologist marks as present. This is the aggregate score mentioned in the Introduction. It takes only 28 distinct values, but we model it approximately as a continuous variable in $[0,1]$. We study it in [I.1](#aggregate-score) below and in [Part II](#part-2).
-- **Binary labels.** Each of the 27 labels is kept as a separate yes/no outcome and modeled as a Bernoulli variable. We study them in [I.2](#binary-labels) below and in [Part III](#part-3).
+- **Aggregate score.** The average of a radiologist's $27$ labels, $Y_r^{\mathrm{avg}}=\frac{1}{27}\sum_{h=1}^{27}Y_{r,h},$ is the share of findings that the radiologist marks as present. This is the aggregate score mentioned in the Introduction. It takes only $28$ distinct values, but we model it approximately as a continuous variable in $[0,1].$ We study it in [I.1](#aggregate-score) below and in [Part II](#part-2).
+- **Binary labels.** Each of the $27$ labels is kept as a separate yes/no outcome and modeled as a Bernoulli variable. We study them in [I.2](#binary-labels) below and in [Part III](#part-3).
 
 ::: {.callout-note collapse="true" title="How VinDr-CXR was annotated"}
 
-Each of the 15,000 training images in VinDr-CXR was labeled independently by three radiologists, and each radiologist's labels are released separately with a radiologist ID. This is what allows us to train a model on one radiologist and compare it with another. The 3,000 test images carry only a consensus of five radiologists, so they have no radiologist-specific labels.
+Each of the $15{,}000$ training images in VinDr-CXR was labeled independently by three radiologists, and each radiologist's labels are released separately with a radiologist ID. This is what allows us to train a model on one radiologist and compare it with another. The $3{,}000$ test images carry only a consensus of five radiologists, so they have no radiologist-specific labels.
 
 :::
 
@@ -19,22 +19,22 @@ Each of the 15,000 training images in VinDr-CXR was labeled independently by thr
 
 #### Setup
 
-We start with the aggregate score. Let $X$ denote a randomly drawn item (a chest X-ray). The score that annotator $r$ gives to item $x$, that is, the score $Y_r^{\mathrm{avg}}$ defined above, is modeled as
+We start with the aggregate score. Let $X$ denote a randomly drawn item (a chest X-ray). The score that annotator $r$ gives to item $x,$ that is, the score $Y_r^{\mathrm{avg}}$ defined above, is modeled as
 
 $$
 Y_r(x)=\mu_r(x)+\epsilon_{r,x},\qquad \mu_r(x)=\mu^*(x)+b_r(x).
 $$ {#eq-aggregate-model}
 
-Here $\mu^*(x)$ is the latent target (which we never observe), $b_r(x)$ is the systematic bias of annotator $r$ on item $x$, and $\epsilon_{r,x}$ is idiosyncratic noise.
+Here $\mu^*(x)$ is the latent target (which we never observe), $b_r(x)$ is the systematic bias of annotator $r$ on item $x,$ and $\epsilon_{r,x}$ is idiosyncratic noise.
 
-Here and below, annotators are independent and identically distributed (IID) draws from an annotator population. With the annotators held fixed, $\mathbb E_\epsilon$ averages over the annotation noise $\epsilon$ for a fixed item, $\mathbb E_X$ averages over items $X$, and $\mathbb E_{X,\epsilon}=\mathbb E_X\mathbb E_\epsilon$ averages over both. With the item held fixed, $\mathbb E_r$ averages over the draw of annotator $r$. We make the following assumptions:
+Here and below, annotators are independent and identically distributed (IID) draws from an annotator population. With the annotators held fixed, $\mathbb E_\epsilon$ averages over the annotation noise $\epsilon$ for a fixed item, $\mathbb E_X$ averages over items $X,$ and $\mathbb E_{X,\epsilon}=\mathbb E_X\mathbb E_\epsilon$ averages over both. With the item held fixed, $\mathbb E_r$ averages over the draw of annotator $r.$ We make the following assumptions:
 
-- **Centered noise:** $\mathbb E_\epsilon[\epsilon_{r,x}]=0$. Given the item and the annotator, the idiosyncratic noise is centered, so $\mu_r(x)=\mathbb E_\epsilon[Y_r(x)]$ is annotator $r$'s mean score on item $x$.
-- **Centered bias:** $\mathbb E_r[b_r(x)]=0$. For annotators drawn at random from the population, the bias is centered itemwise, so $\mu^*(x)=\mathbb E_r[\mu_r(x)]$ is the population-average score on item $x$.
-- **Conditional independence:** $\epsilon_{r,x}\perp\epsilon_{s,x'}$ for $(r,x)\neq(s,x')$. Conditional on the items and the annotator identities, the idiosyncratic noises are independent across annotators and across items. 
+- **Centered noise:** $\mathbb E_\epsilon[\epsilon_{r,x}]=0.$ Given the item and the annotator, the idiosyncratic noise is centered, so $\mu_r(x)=\mathbb E_\epsilon[Y_r(x)]$ is annotator $r$'s mean score on item $x.$
+- **Centered bias:** $\mathbb E_r[b_r(x)]=0.$ For annotators drawn at random from the population, the bias is centered itemwise, so $\mu^*(x)=\mathbb E_r[\mu_r(x)]$ is the population-average score on item $x.$
+- **Conditional independence:** $\epsilon_{r,x}\perp\epsilon_{s,x'}$ for $(r,x)\neq(s,x').$ Conditional on the items and the annotator identities, the idiosyncratic noises are independent across annotators and across items. 
 <!-- The latent target is therefore a consensus of annotators rather than a clinical ground truth, and the second assumption does not make any particular annotator, or any small panel, unbiased. -->
 
-We denote the model trained on annotator A's labels as $\widehat\mu_A$. Here, the training loss is the mean squared error (MSE), which targets A's conditional mean $\mu_A$[@hastie2009elements], so we have
+We denote the model trained on annotator A's labels as $\widehat\mu_A.$ Here, the training loss is the mean squared error (MSE), which targets A's conditional mean $\mu_A$[@hastie2009elements], so we have
 
 $$
 \widehat\mu_A(x)=\mu_A(x)+\widehat e_A(x),
@@ -42,7 +42,7 @@ $$
 
 where $\widehat e_A$ collects both the approximation and estimation error^[The *approximation error* is the gap between $\mu_A$ and the closest function that the chosen model class can represent; it reflects the limited flexibility of the model. The *estimation error* is the further gap between the trained model and that closest function; it arises because the model is fitted on finitely many training examples.]. 
 
-To set up the model–human comparison, we compare the model $\widehat\mu_A$, trained by scores from an annotator A, with another human annotator $Y_B$. We use the scores of a reference annotator R as the evaluation reference. The comparison metric is the MSE gap
+To set up the model–human comparison, we compare the model $\widehat\mu_A,$ trained by scores from an annotator A, with another human annotator $Y_B.$ We use the scores of a reference annotator R as the evaluation reference. The comparison metric is the MSE gap
 
 $$
 \Delta_R
@@ -63,7 +63,7 @@ A negative gap favors the model and a positive gap favors the human annotator. T
 
 #### The self-reference effect
 
-Now we formally analyze the question: **to what extent does annotation bias affect a model–human comparison?** Since the latent target $\mu^*$ is unobserved, we consider model–human comparisons using either $R=A$ or $R=C$ as the reference, where $C$ is an annotator distinct from both $A$ and $B$.  We refer to the former setting as *self-reference setting* and the corresponding biased effect as *self-reference effect*.
+Now we formally analyze the question: **to what extent does annotation bias affect a model–human comparison?** Since the latent target $\mu^*$ is unobserved, we consider model–human comparisons using either $R=A$ or $R=C$ as the reference, where $C$ is an annotator distinct from both $A$ and $B.$  We refer to the former setting as *self-reference setting* and the corresponding biased effect as *self-reference effect*.
 
 As discussed in the [Introduction](#introduction), self-reference may favor the model's performance. We measure this advantage by the change in the MSE gap when C replaces A as the reference:
 
@@ -71,11 +71,11 @@ $$
 S_{A,C}=\Delta_C-\Delta_A=2\mathbb E_{X,\epsilon}\!\left[(Y_A(X)-Y_C(X))(\widehat\mu_A(X)-Y_B(X))\right].
 $$ {#eq-self-reference}
 
-**A positive $S_{A,C}$ means that self-reference favors the model:** $S_{A,C}>0$ if and only if $\Delta_A<\Delta_C$, that is, the model looks better when judged by its own training annotator than when judged by an independent one. Below, we first show that $S_{A,C}$ tends to be positive over randomly drawn annotators, and then test whether $S_{A,C}>0$ for real radiologists and tasks in VinDr-CXR.
+**A positive $S_{A,C}$ means that self-reference favors the model:** $S_{A,C}>0$ if and only if $\Delta_A<\Delta_C,$ that is, the model looks better when judged by its own training annotator than when judged by an independent one. Below, we first show that $S_{A,C}$ tends to be positive over randomly drawn annotators, and then test whether $S_{A,C}>0$ for real radiologists and tasks in VinDr-CXR.
 
 ::: {.callout-note collapse="true" title="Deriving the formula for the self-reference effect"}
 
-By the definition of $\Delta_R$, group the model terms and the human terms, and apply $u^2-v^2=(u-v)(u+v)$ to each group:
+By the definition of $\Delta_R,$ group the model terms and the human terms, and apply $u^2-v^2=(u-v)(u+v)$ to each group:
 
 $$
 \begin{aligned}
@@ -86,7 +86,7 @@ $$
 \end{aligned}
 $$
 
-This step uses only the definition of $\Delta_R$, so the same formula also holds for the binary labels in [I.2](#binary-labels).
+This step uses only the definition of $\Delta_R,$ so the same formula also holds for the binary labels in [I.2](#binary-labels).
 
 :::
 
@@ -103,14 +103,14 @@ The first term is positive whenever annotators are biased, and it does not depen
 
 ::: {.callout-note collapse="true" title="Deriving the average self-reference effect"}
 
-**Step 1: remove the noise.** In @eq-self-reference, write $Y_r(X)=\mu_r(X)+\epsilon_{r,X}$ and $\widehat\mu_A=\mu_A+\widehat e_A$. On evaluation items held out from fitting, $\widehat\mu_A$ does not depend on the evaluation noise. The centered-noise assumption then removes every product of a single noise term with a function of $X$, and the conditional-independence assumption removes the products of noises from different annotators. What remains is
+**Step 1: remove the noise.** In @eq-self-reference, write $Y_r(X)=\mu_r(X)+\epsilon_{r,X}$ and $\widehat\mu_A=\mu_A+\widehat e_A.$ On evaluation items held out from fitting, $\widehat\mu_A$ does not depend on the evaluation noise. The centered-noise assumption then removes every product of a single noise term with a function of $X,$ and the conditional-independence assumption removes the products of noises from different annotators. What remains is
 
 $$
 \frac{S_{A,C}}{2}
 =\mathbb E_X\!\left[(\mu_A(X)-\mu_C(X))(\mu_A(X)-\mu_B(X)+\widehat e_A(X))\right].
 $$
 
-**Step 2: express the result through the biases.** Substituting $\mu_r=\mu^*+b_r$, the latent target cancels:
+**Step 2: express the result through the biases.** Substituting $\mu_r=\mu^*+b_r,$ the latent target cancels:
 
 $$
 \begin{aligned}
@@ -120,7 +120,7 @@ $$
 \end{aligned}
 $$ {#eq-bias-decomposition}
 
-**Step 3: average over annotators.** Draw A, B, and C independently from the population, and let $\mathbb E_A$ average over A and A's training data, on which $\widehat e_A$ depends. At each item $x$, independence and the centered-bias assumption $\mathbb E_r[b_r(x)]=0$ give
+**Step 3: average over annotators.** Draw A, B, and C independently from the population, and let $\mathbb E_A$ average over A and A's training data, on which $\widehat e_A$ depends. At each item $x,$ independence and the centered-bias assumption $\mathbb E_r[b_r(x)]=0$ give
 
 $$
 \mathbb E_{A,B,C}[b_A(x)\,b_B(x)]=\mathbb E_{A,B,C}[b_C(x)\,b_A(x)]=\mathbb E_{A,B,C}[b_C(x)\,b_B(x)]=\mathbb E_{A,B,C}[b_C(x)\,\widehat e_A(x)]=0,
@@ -128,15 +128,15 @@ $$
 \mathbb E_{A,B,C}[b_A(x)^2]=\mathbb E_r[b_r(x)^2].
 $$
 
-For example, $\mathbb E_{A,B,C}[b_C(x)\,\widehat e_A(x)]=\mathbb E_r[b_r(x)]\,\mathbb E_A[\widehat e_A(x)]=0$ because C is independent of A and its training data. Averaging @eq-bias-decomposition over A, B, and C, and then over $X$, therefore leaves only the terms $\mathbb E_X[b_A(X)^2]$ and $\mathbb E_X[b_A(X)\,\widehat e_A(X)]$, which gives @eq-average-self-reference.
+For example, $\mathbb E_{A,B,C}[b_C(x)\,\widehat e_A(x)]=\mathbb E_r[b_r(x)]\,\mathbb E_A[\widehat e_A(x)]=0$ because C is independent of A and its training data. Averaging @eq-bias-decomposition over A, B, and C, and then over $X,$ therefore leaves only the terms $\mathbb E_X[b_A(X)^2]$ and $\mathbb E_X[b_A(X)\,\widehat e_A(X)],$ which gives @eq-average-self-reference.
 
-**Step 4: bound the second term.** With $\|f\|_2^2=\mathbb E_X[f(X)^2]$, the Cauchy–Schwarz inequality gives $|\mathbb E_X[b_A(X)\,\widehat e_A(X)]|\leq\|b_A\|_2\,\|\widehat e_A\|_2$, so the second term of @eq-average-self-reference is at most $2\mathbb E_A[\|b_A\|_2\,\|\widehat e_A\|_2]$ in absolute value.
+**Step 4: bound the second term.** With $\|f\|_2^2=\mathbb E_X[f(X)^2],$ the Cauchy–Schwarz inequality gives $|\mathbb E_X[b_A(X)\,\widehat e_A(X)]|\leq\|b_A\|_2\,\|\widehat e_A\|_2,$ so the second term of @eq-average-self-reference is at most $2\mathbb E_A[\|b_A\|_2\,\|\widehat e_A\|_2]$ in absolute value.
 
 :::
 
 ::: {.callout-note collapse="true" title="Controlling the learning error"}
 
-If the model exactly minimizes the training MSE over a class $\mathcal F$ of functions with values in $[0,1]$, using $n$ IID training items, a standard Rademacher-complexity argument gives, with probability at least $1-\delta$,
+If the model exactly minimizes the training MSE over a class $\mathcal F$ of functions with values in $[0,1],$ using $n$ IID training items, a standard Rademacher-complexity argument gives, with probability at least $1-\delta,$
 
 $$
 \|\widehat e_A\|_2^2\leq
@@ -145,15 +145,15 @@ $$
 +2\sqrt{\frac{\log(2/\delta)}{2n}}
 $$
 
-where $\|\widehat e_A\|_2^2=\mathbb E_X[\widehat e_A(X)^2]$ is the mean squared learning error (the same norm is used for the other functions), and $\mathfrak R_n(\mathcal F)$ is the Rademacher complexity of $\mathcal F$. The first term on the right is the approximation error and the other two are the estimation error. Combined with the Cauchy–Schwarz bound $|\mathbb E_X[b_A(X)\,\widehat e_A(X)]|\leq\|b_A\|_2\,\|\widehat e_A\|_2$, this shows that the second term of @eq-average-self-reference vanishes as the approximation and estimation errors vanish.
+where $\|\widehat e_A\|_2^2=\mathbb E_X[\widehat e_A(X)^2]$ is the mean squared learning error (the same norm is used for the other functions), and $\mathfrak R_n(\mathcal F)$ is the Rademacher complexity of $\mathcal F.$ The first term on the right is the approximation error and the other two are the estimation error. Combined with the Cauchy–Schwarz bound $|\mathbb E_X[b_A(X)\,\widehat e_A(X)]|\leq\|b_A\|_2\,\|\widehat e_A\|_2,$ this shows that the second term of @eq-average-self-reference vanishes as the approximation and estimation errors vanish.
 
 :::
 
 #### Testing the effect on the VinDr-CXR dataset
 
-A real study, however, involves specific annotators rather than an average over the population. We therefore test, for each comparison among three radiologists in VinDr-CXR, whether self-reference favors the model, that is, whether $S_{A,C}>0$.
+A real study, however, involves specific annotators rather than an average over the population. We therefore test, for each comparison among three radiologists in VinDr-CXR, whether self-reference favors the model, that is, whether $S_{A,C}>0.$
 
-Each held-out image contributes one paired term, computed from the three radiologists' scores and the model's prediction on that image. For images $X_1,\ldots,X_n$, write $Y_{r,i}=Y_r(X_i)$ and estimate $S_{A,C}$ by
+Each held-out image contributes one paired term, computed from the three radiologists' scores and the model's prediction on that image. For images $X_1,\ldots,X_n,$ write $Y_{r,i}=Y_r(X_i)$ and estimate $S_{A,C}$ by
 
 $$
 \widehat S_{A,C}=\frac1n\sum_{i=1}^nZ_i,\qquad Z_i=2(Y_{A,i}-Y_{C,i})(\widehat\mu_A(X_i)-Y_{B,i}).
@@ -165,17 +165,17 @@ $$
 T_{A,C}=\frac{\widehat S_{A,C}}{\widehat{\mathrm{se}}(\widehat S_{A,C})}>t_{n-1,1-\alpha}.
 $$ {#eq-task1-test}
 
-where $\widehat{\mathrm{se}}(\widehat S_{A,C})$ is the sample standard deviation of the $Z_i$ divided by $\sqrt n$. Conditional on the trained model, this test has asymptotic level $\alpha$ when the images are drawn IID and $Z_i$ has finite nonzero variance.
+where $\widehat{\mathrm{se}}(\widehat S_{A,C})$ is the sample standard deviation of the $Z_i$ divided by $\sqrt n.$ Conditional on the trained model, this test has asymptotic level $\alpha$ when the images are drawn IID and $Z_i$ has finite nonzero variance.
 
 ::: {.callout-note collapse="true" title="Proof that the test has asymptotic level α"}
 
-**Claim.** Condition on $\widehat\mu_A$, and suppose the evaluation images are IID and $\sigma^2=\operatorname{Var}(Z_i)\in(0,\infty)$. Then, for any fixed distribution satisfying $H_0:S_{A,C}\leq0$,
+**Claim.** Condition on $\widehat\mu_A,$ and suppose the evaluation images are IID and $\sigma^2=\operatorname{Var}(Z_i)\in(0,\infty).$ Then, for any fixed distribution satisfying $H_0:S_{A,C}\leq0,$
 
 $$
 \limsup_{n\to\infty}\Pr\!\left(T_{A,C}>t_{n-1,1-\alpha}\right)\leq\alpha.
 $$
 
-**Proof.** Let $s_Z^2$ be the sample variance of $Z_1,\ldots,Z_n$, so that $\widehat{\mathrm{se}}(\widehat S_{A,C})=s_Z/\sqrt n$. By the central limit theorem,
+**Proof.** Let $s_Z^2$ be the sample variance of $Z_1,\ldots,Z_n,$ so that $\widehat{\mathrm{se}}(\widehat S_{A,C})=s_Z/\sqrt n.$ By the central limit theorem,
 
 $$
 \frac{\sqrt n\,(\widehat S_{A,C}-S_{A,C})}{\sigma}\Rightarrow N(0,1),
@@ -195,15 +195,15 @@ T_{A,C}
 +\frac{\sqrt n\,S_{A,C}}{s_Z}.
 $$
 
-If $S_{A,C}=0$, the second term vanishes and $T_{A,C}\Rightarrow N(0,1)$; since $t_{n-1,1-\alpha}\to z_{1-\alpha}$, the rejection probability converges to $\alpha$. If $S_{A,C}<0$, the second term tends to $-\infty$ in probability while the first is bounded in probability, so the rejection probability converges to $0$. In both cases the claim holds.
+If $S_{A,C}=0,$ the second term vanishes and $T_{A,C}\Rightarrow N(0,1);$ since $t_{n-1,1-\alpha}\to z_{1-\alpha},$ the rejection probability converges to $\alpha.$ If $S_{A,C}<0,$ the second term tends to $-\infty$ in probability while the first is bounded in probability, so the rejection probability converges to $0.$ In both cases the claim holds.
 
 :::
 
 #### Experiment
 
-We use three radiologists from VinDr-CXR, R8, R9, and R10^[R8, R9, and R10 are the radiologist IDs in the released VinDr-CXR annotations.], and train one model on each radiologist's aggregate scores. Each chest X-ray enters the model as a spatially pooled 1,376-dimensional embedding from Google's pretrained CXR Foundation encoder^[We use the `elixr-c-v2-pooled` checkpoint [@xu2023elixr] from Google's CXR Foundation.] [@google2024cxr]. The model is an MLP on this embedding with one sigmoid output, trained with MSE.
+We use three radiologists from VinDr-CXR, R8, R9, and R10^[R8, R9, and R10 are the radiologist IDs in the released VinDr-CXR annotations.], and train one model on each radiologist's aggregate scores. Each chest X-ray enters the model as a spatially pooled $1{,}376$-dimensional embedding from Google's pretrained CXR Foundation encoder^[We use the `elixr-c-v2-pooled` checkpoint [@xu2023elixr] from Google's CXR Foundation.] [@google2024cxr]. The model is an MLP on this embedding with one sigmoid output, trained with MSE.
 
-All three models are evaluated on the same **1,500 held-out images**, each scored by all three radiologists. Taking one radiologist as the training annotator A, another as the compared annotator B, and the third as the external reference C gives six comparisons, each tested on 1,500 paired observations.
+All three models are evaluated on the same **$1{,}500$ held-out images**, each scored by all three radiologists. Taking one radiologist as the training annotator A, another as the compared annotator B, and the third as the external reference C gives six comparisons, each tested on $1{,}500$ paired observations.
 
 <!--
 ::: {.callout-note collapse="true" title="Training and validation data for each radiologist"}
@@ -225,7 +225,7 @@ The mean aggregate score over the 4,500 evaluation scores (1,500 images × 3 rad
 
 The test detects a positive self-reference effect in both comparisons for the R8- and R9-trained models, but in neither comparison for the R10-trained model. In four of the six comparisons, then, evaluating the model against its own training radiologist makes it look significantly better than evaluating it against an independent radiologist. On real radiologist labels, annotation bias does shift the model–human comparison, in the direction predicted by @eq-average-self-reference.
 
- For the R10-trained model, the effect is in fact reversed: the estimate $\widehat S_{A,C}$ is negative in both of its comparisons, which is why their one-sided p-values are close to 1. A plausible explanation is that, when R10 trains the model, the compared radiologist B and the external reference C are R8 and R9, the least concordant pair: their pairwise absolute-agreement ICC^[$\mathrm{ICC}=\dfrac{\sigma^2_{\text{image}}}{\sigma^2_{\text{image}}+\sigma^2_{\text{radiologist}}+\sigma^2_{\text{noise}}}$. The variance of the two radiologists' scores is split into three parts: $\sigma^2_{\text{image}}$, from differences between images; $\sigma^2_{\text{radiologist}}$, from a systematic difference between the two radiologists, such as one scoring higher overall; and $\sigma^2_{\text{noise}}$, the rest. It ranges from 0 to 1, and higher values mean closer agreement between two radiologists.] is 0.739, against 0.841 for R8 and R10 and 0.786 for R9 and R10. When judged by C, the human annotator B would be penalized by the large disagreement between R8 and R9. The model, trained on R10, agrees more closely with both and would be penalized less. The external reference would then favor the model even more than self-reference does ($\Delta_C<\Delta_A$).
+ For the R10-trained model, the effect is in fact reversed: the estimate $\widehat S_{A,C}$ is negative in both of its comparisons, which is why their one-sided p-values are close to $1.$ A plausible explanation is that, when R10 trains the model, the compared radiologist B and the external reference C are R8 and R9, the least concordant pair: their pairwise absolute-agreement ICC^[$\mathrm{ICC}=\dfrac{\sigma^2_{\text{image}}}{\sigma^2_{\text{image}}+\sigma^2_{\text{radiologist}}+\sigma^2_{\text{noise}}}.$ The variance of the two radiologists' scores is split into three parts: $\sigma^2_{\text{image}},$ from differences between images; $\sigma^2_{\text{radiologist}},$ from a systematic difference between the two radiologists, such as one scoring higher overall; and $\sigma^2_{\text{noise}},$ the rest. It ranges from $0$ to $1,$ and higher values mean closer agreement between two radiologists.] is $0.739,$ against $0.841$ for R8 and R10 and $0.786$ for R9 and R10. When judged by C, the human annotator B would be penalized by the large disagreement between R8 and R9. The model, trained on R10, agrees more closely with both and would be penalized less. The external reference would then favor the model even more than self-reference does ($\Delta_C<\Delta_A$).
 
 ::: {#fig-scalar-task1}
 
@@ -243,7 +243,7 @@ The test detects a positive self-reference effect in both comparisons for the R8
 
 :::
 
-Self-reference test for the aggregate score. One-sided p-values for a positive self-reference effect over 1,500 test images; nominal threshold 0.01. In each comparison the external reference is the remaining radiologist.
+Self-reference test for the aggregate score. One-sided p-values for a positive self-reference effect over $1{,}500$ test images; nominal threshold $0.01.$ In each comparison the external reference is the remaining radiologist.
 
 :::
 
@@ -253,7 +253,7 @@ The aggregate score summarizes how broadly a radiologist marks findings but disc
 
 #### Setup
 
-For a binary finding $h$, we model each annotator's label as
+For a binary finding $h,$ we model each annotator's label as
 
 $$
 Y_{r,h}(x)\sim\operatorname{Bernoulli}(\mu_{r,h}(x)),
@@ -262,10 +262,10 @@ Y_{r,h}(x)\sim\operatorname{Bernoulli}(\mu_{r,h}(x)),
 =\operatorname{logit}\mu_h^*(x)+b_{r,h}(x),
 $$
 
-so annotator bias acts on the logit scale. The Bernoulli model, which follows the annotator-specific labeling construction of @raykar2010learning, already makes $\mu_{r,h}(x)$ annotator $r$'s probability of marking finding $h$ on item $x$, so no separate noise assumption is needed. We make the following assumptions:
+so annotator bias acts on the logit scale. The Bernoulli model, which follows the annotator-specific labeling construction of @raykar2010learning, already makes $\mu_{r,h}(x)$ annotator $r$'s probability of marking finding $h$ on item $x,$ so no separate noise assumption is needed. We make the following assumptions:
 
-- **Centered logit bias:** $\mathbb E_r[b_{r,h}(x)]=0$. Unlike in [I.1](#aggregate-score), this does not make the average probability $\mathbb E_r[\mu_{r,h}(x)]$ equal to $\mu_h^*(x)$; this gap becomes a central challenge for [Part III](#part-3).
-- **Conditional independence:** for $(r,x)\neq(s,x')$, the labels $Y_{r,h}(x)$ and $Y_{s,h}(x')$ are independent conditional on the annotator identities $r$ and $s$.
+- **Centered logit bias:** $\mathbb E_r[b_{r,h}(x)]=0.$ Unlike in [I.1](#aggregate-score), this does not make the average probability $\mathbb E_r[\mu_{r,h}(x)]$ equal to $\mu_h^*(x);$ this gap becomes a central challenge for [Part III](#part-3).
+- **Conditional independence:** for $(r,x)\neq(s,x'),$ the labels $Y_{r,h}(x)$ and $Y_{s,h}(x')$ are independent conditional on the annotator identities $r$ and $s.$
 
 
 For binary labels, we train the model $\widehat\mu_{A,h}$ with binary cross-entropy (BCE). Like MSE, BCE also targets the annotator's conditional probability $\mu_{A,h}$ [@hastie2009elements], so the trained model again carries A's bias. Like a radiologist, the model enters the comparison through a binary decision,
@@ -274,7 +274,7 @@ $$
 \widehat Y_{A,h}(x)=\mathbf 1\{\widehat\mu_{A,h}(x)\geq t_h\},
 $$ {#eq-binary-decision}
 
-where the threshold $t_h$ is chosen on validation data independent of the evaluation images and fixed before evaluation. Since $\widehat Y_{A,h}$, $Y_{B,h}$, and $Y_{R,h}$ all take values in $\{0,1\}$, the squared loss in @eq-comparison-gap coincides with the 0-1 loss, and the comparison gap is the difference between the misclassification rates of the model and of B, both measured against $Y_{R,h}$:
+where the threshold $t_h$ is chosen on validation data independent of the evaluation images and fixed before evaluation. Since $\widehat Y_{A,h},$ $Y_{B,h},$ and $Y_{R,h}$ all take values in $\{0,1\},$ the squared loss in @eq-comparison-gap coincides with the $0$-$1$ loss, and the comparison gap is the difference between the misclassification rates of the model and of B, both measured against $Y_{R,h}:$
 
 $$
 \Delta_{R,h}
@@ -283,14 +283,14 @@ $$
 
 #### The self-reference effect for binary labels
 
-For each finding, the self-reference effect is then $S_{A,C,h}:=\Delta_{C,h}-\Delta_{A,h}$, the difference between the gaps under the external annotator C and the training annotator A. As in @eq-self-reference, it reduces to
+For each finding, the self-reference effect is then $S_{A,C,h}:=\Delta_{C,h}-\Delta_{A,h},$ the difference between the gaps under the external annotator C and the training annotator A. As in @eq-self-reference, it reduces to
 
 $$
 S_{A,C,h}
 =2\mathbb E_{X,\epsilon}[(Y_{A,h}(X)-Y_{C,h}(X))(\widehat Y_{A,h}(X)-Y_{B,h}(X))],
 $$
 
-and the test @eq-task1-test applies unchanged, with $\widehat Y_{A,h}$ in place of $\widehat\mu_A$ in the paired terms $Z_i$.
+and the test @eq-task1-test applies unchanged, with $\widehat Y_{A,h}$ in place of $\widehat\mu_A$ in the paired terms $Z_i.$
 
 Consider a special case where the threshold $t_h$ is common to all annotators. Drawing A, B, and C independently from the population as in [I.1](#aggregate-score), the average over annotators replaces @eq-average-self-reference
 by
@@ -300,7 +300,7 @@ $$
 +2\mathbb E_X\big[\operatorname{Cov}_A\big(\mu_{A,h},\mathbf 1\{\widehat\mu_{A,h}\geq t_h\}-\mathbf 1\{\mu_{A,h}\geq t_h\}\big)\big].
 $$ {#eq-binary-average-self-reference}
 
-The first term does not depend on the fitted model and is nonnegative because the decision $\mathbf{1}\{\mu_{A,h}\ge t_h\}$ is nondecreasing in $\mu_{A,h}$^[It is positive if, for at least one image, $\mu_{r,h}$ lies above $t_h$ for some annotators and below $t_h$ for others]. The covariance term in the second term captures the alignment between an annotator's probability $\mu_{A,h}$ and the model's decision error, which can have either sign. Moreover, its magnitude diminishes as the model fits annotator $A$ more closely. Thus, for annotators drawn randomly from the population, self-reference is expected to make the model appear better than an independent reference would, with the magnitude of this effect determined by how much the annotators' probabilities vary across the threshold $t_h$.
+The first term does not depend on the fitted model and is nonnegative because the decision $\mathbf{1}\{\mu_{A,h}\ge t_h\}$ is nondecreasing in $\mu_{A,h}$^[It is positive if, for at least one image, $\mu_{r,h}$ lies above $t_h$ for some annotators and below $t_h$ for others]. The covariance term in the second term captures the alignment between an annotator's probability $\mu_{A,h}$ and the model's decision error, which can have either sign. Moreover, its magnitude diminishes as the model fits annotator $A$ more closely. Thus, for annotators drawn randomly from the population, self-reference is expected to make the model appear better than an independent reference would, with the magnitude of this effect determined by how much the annotators' probabilities vary across the threshold $t_h.$
 
 ::: {.callout-note collapse="true" title="Deriving the average effect for binary labels"}
 
@@ -319,9 +319,9 @@ $$
 =\operatorname{Cov}_A\big(\mu_{A,h},\widehat Y_{A,h}\big).
 $$
 
-**Step 3: split the covariance.** Adding and subtracting $\mathbf 1\{\mu_{A,h}\geq t_h\}$ in the second argument and averaging over items gives @eq-binary-average-self-reference. When $t_h$ is common to all annotators, the first covariance is nonnegative because $\mathbf 1\{\mu\geq t_h\}$ is nondecreasing in $\mu$; it is zero at an item where all annotators' probabilities lie on the same side of $t_h$.
+**Step 3: split the covariance.** Adding and subtracting $\mathbf 1\{\mu_{A,h}\geq t_h\}$ in the second argument and averaging over items gives @eq-binary-average-self-reference. When $t_h$ is common to all annotators, the first covariance is nonnegative because $\mathbf 1\{\mu\geq t_h\}$ is nondecreasing in $\mu;$ it is zero at an item where all annotators' probabilities lie on the same side of $t_h.$
 
-**Step 4: bound the second term.** With learning error $\widehat e_{A,h}=\widehat\mu_{A,h}-\mu_{A,h}$, the two decisions differ only if $|\widehat e_{A,h}(X)|\geq|\mu_{A,h}(X)-t_h|$, and probabilities lie in $[0,1]$. So for any $\eta>0$, the second term is at most
+**Step 4: bound the second term.** With learning error $\widehat e_{A,h}=\widehat\mu_{A,h}-\mu_{A,h},$ the two decisions differ only if $|\widehat e_{A,h}(X)|\geq|\mu_{A,h}(X)-t_h|,$ and probabilities lie in $[0,1].$ So for any $\eta>0,$ the second term is at most
 
 $$
 2\,\mathbb E_A\Big[P_X\big(|\mu_{A,h}(X)-t_h|\leq\eta\big)+\frac{\mathbb E_X[\widehat e_{A,h}(X)^2]}{\eta^2}\Big]
@@ -333,7 +333,7 @@ in absolute value.
 
 #### Experiment
 
-The experiment uses the same radiologists, image embedding, and 1,500 evaluation images as [I.1](#aggregate-score). Each radiologist's model is now an MLP with 27 sigmoid outputs, one per finding, trained with BCE. Each output is turned into a decision as in @eq-binary-decision, with a threshold chosen on the radiologist's own validation data and fixed before evaluation.
+The experiment uses the same radiologists, image embedding, and $1{,}500$ evaluation images as [I.1](#aggregate-score). Each radiologist's model is now an MLP with $27$ sigmoid outputs, one per finding, trained with BCE. Each output is turned into a decision as in @eq-binary-decision, with a threshold chosen on the radiologist's own validation data and fixed before evaluation.
 For each of the six comparisons, we apply the test of [I.1](#aggregate-score) to each finding separately.
 <!-- [[VERIFY:real-bernoulli-task1-probability-version]] The supplied Task I summary does not record whether the test used raw or temperature-scaled probabilities. -->
 
@@ -345,13 +345,13 @@ For each of the six comparisons, we apply the test of [I.1](#aggregate-score) to
 
 ::: {.callout-note collapse="true" title="The 27 findings"}
 
-The 27 findings are: Aortic enlargement; Atelectasis; Calcification; Cardiomegaly; Clavicle fracture; Consolidation; Edema; Emphysema; Enlarged PA; ILD; Infiltration; Lung Opacity; Lung cavity; Lung cyst; Mediastinal shift; Nodule/Mass; Pleural effusion; Pleural thickening; Pneumothorax; Pulmonary fibrosis; Rib fracture; Other lesion; COPD; Lung tumor; Pneumonia; Tuberculosis; Other diseases.
+The $27$ findings are: Aortic enlargement; Atelectasis; Calcification; Cardiomegaly; Clavicle fracture; Consolidation; Edema; Emphysema; Enlarged PA; ILD; Infiltration; Lung Opacity; Lung cavity; Lung cyst; Mediastinal shift; Nodule/Mass; Pleural effusion; Pleural thickening; Pneumothorax; Pulmonary fibrosis; Rib fracture; Other lesion; COPD; Lung tumor; Pneumonia; Tuberculosis; Other diseases.
 
 :::
 
 #### Result: self-reference effects by finding
 
-Of the 138 finding-level tests with at least one image on which the two references disagree ($Y_{A,h}\neq Y_{C,h}$) and the compared pair disagree $(\widehat Y_{A,h}\neq Y_{B,h})$^[There are altogether 27 findings × 6 comparisons = 162 tests. In 24 tests, on every evaluation image either A and C give the same label or the model's decision equals B's label, so the test does not apply.], 12, 22, and 32 tests are significant at the 0.01, 0.05, and 0.10 error levels, against about 1, 7, and 14 expected by chance^[If there were no self-reference effect, each test would reject with probability at most its level $\alpha$, so the expected number of rejections among the 138 tests is at most $138\alpha$.]. Select a finding in @fig-real-bernoulli-task1 to see its results.
+Of the $138$ finding-level tests with at least one image on which the two references disagree ($Y_{A,h}\neq Y_{C,h}$) and the compared pair disagree $(\widehat Y_{A,h}\neq Y_{B,h})$^[There are altogether $27$ findings × $6$ comparisons = $162$ tests. In $24$ tests, on every evaluation image either A and C give the same label or the model's decision equals B's label, so the test does not apply.], $12,$ $22,$ and $32$ tests are significant at the $0.01,$ $0.05,$ and $0.10$ error levels, against about $1,$ $7,$ and $14$ expected by chance^[If there were no self-reference effect, each test would reject with probability at most its level $\alpha,$ so the expected number of rejections among the $138$ tests is at most $138\alpha.$]. Select a finding in @fig-real-bernoulli-task1 to see its results.
 
 ::: {#fig-real-bernoulli-task1}
 
@@ -359,7 +359,7 @@ Of the 138 finding-level tests with at least one image on which the two referenc
 
 ::: {.ab-widget data-widget="bernoulli-task1"}
 
-Atelectasis: a positive self-reference effect is detected in 1 of 6 comparisons at threshold 0.05.
+Atelectasis: a positive self-reference effect is detected in $1$ of $6$ comparisons at threshold $0.05.$
 
 | Model | Human R8 | Human R9 | Human R10 |
 |---|---:|---:|---:|
@@ -371,7 +371,7 @@ Atelectasis: a positive self-reference effect is detected in 1 of 6 comparisons 
 
 :::
 
-Self-reference test for each finding. One-sided p-values over 1,500 test images; unadjusted nominal tests. In each comparison the external reference is the remaining radiologist. "No variation" marks tests in which every paired term $Z_i$ is zero.
+Self-reference test for each finding. One-sided p-values over $1{,}500$ test images; unadjusted nominal tests. In each comparison the external reference is the remaining radiologist. "No variation" marks tests in which every paired term $Z_i$ is zero.
 
 :::
 
