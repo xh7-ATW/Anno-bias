@@ -177,14 +177,29 @@
     return 3 * Math.floor(Math.log10(maxAbs) / 3);
   }
 
-  // Light-to-dark blue scale shared by every heatmap cell (0-100%).
+  // Light-to-dark heatmap scales (0-100%), one per Part in that Part's main
+  // color (--part-1/2/3 in annotation-bias.css).
   var HEAT_STOPS = [[241, 245, 249], [198, 216, 234], [122, 163, 201], [59, 110, 160], [31, 78, 121]];
+  var PART_HEAT_STOPS = [
+    HEAT_STOPS,
+    [[240, 247, 246], [194, 226, 221], [114, 182, 173], [44, 125, 118], [20, 82, 78]],
+    [[246, 242, 248], [222, 206, 230], [177, 142, 196], [121, 78, 143], [83, 46, 101]],
+  ];
 
-  function heatColor(pct) {
-    var t = Math.max(0, Math.min(100, pct)) / 100 * (HEAT_STOPS.length - 1);
-    var i = Math.min(HEAT_STOPS.length - 2, Math.floor(t));
+  // Heatmap scale for the Part tab that contains `el`.
+  function heatStopsFor(el) {
+    var pane = el && el.closest("#research-parts > .tab-content > .tab-pane");
+    if (!pane) return HEAT_STOPS;
+    var i = Array.prototype.indexOf.call(pane.parentNode.children, pane);
+    return PART_HEAT_STOPS[i] || HEAT_STOPS;
+  }
+
+  function heatColor(pct, stops) {
+    stops = stops || HEAT_STOPS;
+    var t = Math.max(0, Math.min(100, pct)) / 100 * (stops.length - 1);
+    var i = Math.min(stops.length - 2, Math.floor(t));
     var f = t - i;
-    var c = HEAT_STOPS[i].map(function (v, k) { return Math.round(v + (HEAT_STOPS[i + 1][k] - v) * f); });
+    var c = stops[i].map(function (v, k) { return Math.round(v + (stops[i + 1][k] - v) * f); });
     return "rgb(" + c.join(",") + ")";
   }
 
@@ -271,9 +286,10 @@
     });
   }
 
-  function heatLegend(label) {
-    var stops = HEAT_STOPS.map(function (c, i) {
-      return "rgb(" + c.join(",") + ") " + (i / (HEAT_STOPS.length - 1) * 100) + "%";
+  function heatLegend(label, scale) {
+    scale = scale || HEAT_STOPS;
+    var stops = scale.map(function (c, i) {
+      return "rgb(" + c.join(",") + ") " + (i / (scale.length - 1) * 100) + "%";
     }).join(", ");
     return h("div", { class: "ab-heat-legend", "aria-hidden": "true" }, [
       h("span", { class: "ab-heat-legend-label", text: label || "Rejection percentage" }),
@@ -391,21 +407,74 @@
     ]);
   }
 
+  // ---------- Dot plots on the -log10(p) scale (Figures 1 and 2) ----------
+
+  // Axis range of -log10(p); the smallest p-value in the data is about 2e-12.
+  var NLP_MAX = 12;
+
+  function nlp(p) { return Math.min(NLP_MAX, -Math.log10(Math.max(p, 1e-300))); }
+  function nlpPos(v) { return (v / NLP_MAX * 100) + "%"; }
+
+  function alphaLine(alpha) {
+    return h("span", { class: "pd-alpha", style: "left:" + nlpPos(-Math.log10(alpha)) });
+  }
+
+  function nlpAxisRow() {
+    return h("div", { class: "pd-row pd-axis-row", "aria-hidden": "true" }, [
+      h("div", { class: "pd-label" }),
+      h("div", { class: "pd-track" }, [0, 2, 4, 6, 8, 10, 12].map(function (t) {
+        return h("span", { class: "ab-tick", style: "left:" + nlpPos(t), text: String(t) });
+      })),
+      h("div", { class: "pd-value" }),
+    ]);
+  }
+
+  function nlpAxisTitle() {
+    return h("div", { class: "pd-axis-title", html: "&minus;log<sub>10</sub>(p-value): further right means stronger evidence" });
+  }
+
+  function pdLegend(alpha) {
+    return h("div", { class: "ab-matrix-legend pd-legend" }, [
+      h("span", null, [h("span", { class: "pd-dot pd-dot-static is-detected", "aria-hidden": "true" }), "Positive effect detected"]),
+      h("span", null, [h("span", { class: "pd-dot pd-dot-static", "aria-hidden": "true" }), "Not detected"]),
+      h("span", null, [h("span", { class: "pd-alpha-static", "aria-hidden": "true" }), "Level " + alpha.toFixed(2)]),
+    ]);
+  }
+
   function initScalarMatrix(container) {
-    var state = { selected: null, highlight: null };
-    var tableHost = h("div", { class: "ab-scroll" });
+    var alpha = 0.01, alphaKey = "0.01";
+    var state = { selected: null };
+    var plot = h("div", { class: "pd-plot" });
     var detail = h("p", { class: "ab-detail", "aria-live": "polite" });
 
     function render() {
-      tableHost.innerHTML = "";
-      tableHost.appendChild(buildMatrix(D.scalar, 0.01, "0.01", state, function (key) { state.selected = state.selected === key ? null : key; render(); }));
+      plot.innerHTML = "";
+      D.scalar.forEach(function (r) {
+        var key = r.A + "|" + r.B + "|" + r.C;
+        var dot = r.p === null || r.p === undefined ? null : h("span", {
+          class: "pd-dot" + (r.reject[alphaKey] ? " is-detected" : ""),
+          style: "left:" + nlpPos(nlp(r.p)),
+        });
+        var row = h("div", { class: "pd-row" + (state.selected === key ? " is-selected" : ""), title: describeCell(r, alpha, alphaKey), "aria-label": describeCell(r, alpha, alphaKey) }, [
+          h("div", { class: "pd-label" }, [
+            h("span", { class: "pd-main", text: r.A + "-trained model vs " + r.B }),
+            h("span", { class: "pd-sub", text: "external reference " + r.C }),
+          ]),
+          h("div", { class: "pd-track" }, [alphaLine(alpha), dot]),
+          h("div", { class: "pd-value", text: pCellText(r.p) }),
+        ]);
+        makeSelectable(row, function () { state.selected = state.selected === key ? null : key; render(); });
+        plot.appendChild(row);
+      });
+      plot.appendChild(nlpAxisRow());
+      plot.appendChild(nlpAxisTitle());
       var sel = D.scalar.filter(function (r) { return r.A + "|" + r.B + "|" + r.C === state.selected; })[0];
-      detail.textContent = sel ? describeCell(sel, 0.01, "0.01") + CLEAR_HINT : "Select a cell to see which radiologist served as the external reference.";
+      detail.textContent = sel ? describeCell(sel, alpha, alphaKey) + " Select the row again to clear." : "Select a row to see its p-value and decision.";
     }
 
     container.innerHTML = "";
-    container.appendChild(matrixLegend());
-    container.appendChild(tableHost);
+    container.appendChild(pdLegend(alpha));
+    container.appendChild(plot);
     container.appendChild(detail);
     render();
   }
@@ -433,17 +502,64 @@
       function (v) { state.alpha = v; render(); });
 
     var lead = h("p", { class: "ab-lead", "aria-live": "polite" });
-    var tableHost = h("div", { class: "ab-scroll" });
+    var legendHost = h("div");
+    var strip = h("div", { class: "pd-plot pd-strip" });
+    var listHost = h("div", { class: "ab-scroll" });
     var detail = h("p", { class: "ab-detail", "aria-live": "polite" });
 
     container.innerHTML = "";
     container.appendChild(h("div", { class: "ab-controls" }, [aspectField.field, alphaField.field]));
     container.appendChild(lead);
-    container.appendChild(matrixLegend());
-    container.appendChild(tableHost);
+    container.appendChild(legendHost);
+    container.appendChild(strip);
+    container.appendChild(listHost);
     container.appendChild(detail);
 
     var chart = changeHost ? initChangeChart(changeHost) : null;
+
+    // One row per finding, one dot per comparison; the selected finding is highlighted.
+    function renderStrip(alpha) {
+      strip.innerHTML = "";
+      findings.forEach(function (f) {
+        var key = String(f.index);
+        var rs = data.rows[key];
+        var current = key === state.aspect;
+        var hits = rs.filter(function (r) { return r.reject[state.alpha]; }).length;
+        var dots = rs.filter(function (r) { return r.p !== null && r.p !== undefined; }).map(function (r) {
+          var k = r.A + "|" + r.B + "|" + r.C;
+          return h("span", {
+            class: "pd-dot is-small" + (r.reject[state.alpha] ? " is-detected" : "") + (current && state.highlight === k ? " is-highlight" : ""),
+            style: "left:" + nlpPos(nlp(r.p)),
+            title: f.name + ": " + describeCell(r, alpha, state.alpha),
+          });
+        });
+        var row = h("div", { class: "pd-row pd-strip-row" + (current ? " is-current" : ""), "aria-label": f.name + ": detected in " + hits + " of 6 comparisons" }, [
+          h("div", { class: "pd-label", text: f.name }),
+          h("div", { class: "pd-track" }, [alphaLine(alpha)].concat(dots)),
+          h("div", { class: "pd-value", text: hits + " of 6" }),
+        ]);
+        makeSelectable(row, function () { state.aspect = key; state.highlight = null; state.selected = null; render(); });
+        strip.appendChild(row);
+      });
+      strip.appendChild(nlpAxisRow());
+      strip.appendChild(nlpAxisTitle());
+    }
+
+    // The six p-values of the selected finding.
+    function renderList(rows, alpha) {
+      var trs = rows.map(function (r) {
+        var key = r.A + "|" + r.B + "|" + r.C;
+        var tr = h("tr", { class: (r.reject[state.alpha] ? "is-cert" : "") + (state.highlight === key || state.selected === key ? " is-selected" : "") }, [
+          cell(r.A + "-trained model vs " + r.B),
+          cell(r.C),
+          cell(pCellText(r.p) + (r.p !== null && r.p !== undefined && r.p < alpha ? " (" + thresholdText(r.p, alpha) + ")" : ""), true),
+        ]);
+        makeSelectable(tr, function () { state.selected = state.selected === key ? null : key; render(); });
+        return tr;
+      });
+      listHost.innerHTML = "";
+      listHost.appendChild(makeTable([{ label: "Comparison" }, { label: "External reference" }, { label: "p-value", num: true }], trs, "ab-inspect-table pd-list"));
+    }
 
     function render() {
       aspectField.select.value = state.aspect;
@@ -455,10 +571,12 @@
       lead.textContent = aspectName() + ": a positive self-reference effect is detected in " + detected + " of 6 comparisons at level " +
         alpha.toFixed(2) + ".";
 
-      tableHost.innerHTML = "";
-      tableHost.appendChild(buildMatrix(rows, alpha, state.alpha, state, function (key) { state.selected = state.selected === key ? null : key; render(); }));
+      legendHost.innerHTML = "";
+      legendHost.appendChild(pdLegend(alpha));
+      renderStrip(alpha);
+      renderList(rows, alpha);
       var sel = rows.filter(function (r) { return r.A + "|" + r.B + "|" + r.C === state.selected; })[0];
-      detail.textContent = sel ? describeCell(sel, alpha, state.alpha) + CLEAR_HINT : "Select a cell to see which radiologist served as the external reference.";
+      detail.textContent = sel ? describeCell(sel, alpha, state.alpha) + " Select the row again to clear." : "Select a finding in the plot, or a comparison in the table, for details.";
 
       if (chart) chart.render(rows, aspectName(), state.highlight);
     }
@@ -562,29 +680,40 @@
           var btn = h("button", {
             type: "button",
             class: "ab-heat-cell" + (selected === key ? " is-selected" : ""),
-            style: "background:" + heatColor(g.pct) + ";color:" + heatText(g.pct),
+            style: "background:" + heatColor(g.pct, heatStopsFor(container)) + ";color:" + heatText(g.pct),
             title: describe(g),
             "aria-label": describe(g),
             "aria-pressed": selected === key ? "true" : "false",
             text: fmtPct(g.pct),
           });
           btn.addEventListener("click", function () { selected = selected === key ? null : key; render(); });
+          // Hovering or focusing a cell shows its count without selecting it.
+          ["mouseenter", "focus"].forEach(function (ev) {
+            btn.addEventListener(ev, function () { detail.textContent = describe(g); });
+          });
+          ["mouseleave", "blur"].forEach(function (ev) {
+            btn.addEventListener(ev, showSelected);
+          });
           return h("td", null, [btn]);
         })));
       }));
       tableHost.innerHTML = "";
       tableHost.appendChild(h("table", { class: "ab-heatmap" }, [head, body]));
+      showSelected();
+    }
+
+    function showSelected() {
       if (selected) {
         var parts = selected.split("|");
         detail.textContent = describe(cellFor(parseInt(parts[0], 10), parts[1])) + CLEAR_HINT;
       } else {
-        detail.textContent = "Select a cell to see its count.";
+        detail.textContent = "Hover over or select a cell to see its count.";
       }
     }
 
     container.innerHTML = "";
     container.appendChild(tableHost);
-    container.appendChild(heatLegend("Certification rate"));
+    container.appendChild(heatLegend("Certification rate", heatStopsFor(container)));
     container.appendChild(detail);
     render();
   }
@@ -696,14 +825,14 @@
       function (v) { state.prob = v; render(); });
 
     var lead = h("p", { class: "ab-lead", "aria-live": "polite" });
-    var barsHost = h("div", { class: "ab-bars" });
+    var chartHost = h("div", { class: "lc-host" });
     var detail = h("p", { class: "ab-detail", "aria-live": "polite" });
     var caption = h("p", { class: "ab-caption" });
 
     container.innerHTML = "";
     container.appendChild(h("div", { class: "ab-controls" }, [aspectField.field, probField.field]));
     container.appendChild(lead);
-    container.appendChild(barsHost);
+    container.appendChild(chartHost);
     container.appendChild(detail);
     container.appendChild(caption);
 
@@ -726,15 +855,86 @@
       return { pct: c.pct, r: c.r, n: c.n, unit: "trials" };
     }
 
-    function describe(K) {
+    function valueAt(K, prob) {
+      var saved = state.prob;
+      state.prob = prob;
       var v = valueFor(state.aspect, K);
-      var text = aspectName(state.aspect) + ", K = " + K + " at total error budget " + probLabel(state.prob) + ": " + fmtInt(v.r) + " of " +
+      state.prob = saved;
+      return v;
+    }
+
+    function describe(K, prob) {
+      prob = prob || state.prob;
+      var v = valueAt(K, prob);
+      var text = aspectName(state.aspect) + ", K = " + K + " at total error budget " + probLabel(prob) + ": " + fmtInt(v.r) + " of " +
         fmtInt(v.n) + " " + v.unit + " certified (" + fmtPct(v.pct) + ").";
       if (state.aspect !== "avg") {
-        var c = syn.cells[state.aspect][K][state.prob];
+        var c = syn.cells[state.aspect][K][prob];
         text += " On average over the trials, the estimated gap is " + c.gap.toFixed(3) + " and the right side of the certification rule is " + c.rhs.toFixed(3) + ".";
       }
       return text;
+    }
+
+    // Certification rate against K, one line per total error budget; the
+    // selected budget is drawn thicker. Hovering a point shows its count.
+    var SVGNS = "http://www.w3.org/2000/svg";
+    function svg(tag, attrs, children) {
+      var el = document.createElementNS(SVGNS, tag);
+      Object.keys(attrs || {}).forEach(function (k) { el.setAttribute(k, attrs[k]); });
+      (children || []).forEach(function (c) { if (c) el.appendChild(c); });
+      return el;
+    }
+
+    function renderLines() {
+      var W = 600, H = 300, L = 56, R = 86, T = 14, B = 46;
+      function x(i) { return L + i * (W - L - R) / (Ks.length - 1); }
+      function y(pct) { return T + (1 - pct / 100) * (H - T - B); }
+      var root = svg("svg", { viewBox: "0 0 " + W + " " + H, class: "lc-svg", role: "img",
+        "aria-label": "Certification rate for " + aspectName(state.aspect) + " against the number of reference annotators K, one line per total error budget." });
+      [0, 25, 50, 75, 100].forEach(function (t) {
+        root.appendChild(svg("line", { class: "lc-grid", x1: L, x2: W - R, y1: y(t), y2: y(t) }));
+        var lab = svg("text", { class: "lc-tick", x: L - 8, y: y(t) + 4, "text-anchor": "end" });
+        lab.textContent = t + "%";
+        root.appendChild(lab);
+      });
+      Ks.forEach(function (K, i) {
+        var lab = svg("text", { class: "lc-tick", x: x(i), y: H - B + 20, "text-anchor": "middle" });
+        lab.textContent = "K = " + K;
+        root.appendChild(lab);
+      });
+      var xt = svg("text", { class: "lc-axis-title", x: (L + W - R) / 2, y: H - 6, "text-anchor": "middle" });
+      xt.textContent = "Number of reference annotators";
+      root.appendChild(xt);
+
+      probs.forEach(function (p, j) {
+        var isSel = p.value === state.prob;
+        var pts = Ks.map(function (K, i) { return { K: K, i: i, v: valueAt(K, p.value) }; });
+        var g = svg("g", { class: "lc-series lc-series-" + j + (isSel ? " is-selected" : "") });
+        g.appendChild(svg("polyline", { class: "lc-line", points: pts.map(function (q) { return x(q.i) + "," + y(q.v.pct); }).join(" ") }));
+        pts.forEach(function (q) {
+          var c = svg("circle", { class: "lc-pt", cx: x(q.i), cy: y(q.v.pct), r: isSel ? 5.5 : 4, tabindex: "0" });
+          var tip = svg("title");
+          tip.textContent = describe(q.K, p.value);
+          c.appendChild(tip);
+          c.addEventListener("mouseenter", function () { detail.textContent = describe(q.K, p.value); });
+          c.addEventListener("focus", function () { detail.textContent = describe(q.K, p.value); });
+          c.addEventListener("mouseleave", showDetail);
+          c.addEventListener("blur", showDetail);
+          c.addEventListener("click", function () { state.prob = p.value; state.selectedK = q.K; render(); });
+          g.appendChild(c);
+        });
+        var last = pts[pts.length - 1];
+        var lab = svg("text", { class: "lc-label", x: x(last.i) + 10, y: y(last.v.pct) + 4 });
+        lab.textContent = "\u03b1 = " + p.label;
+        g.appendChild(lab);
+        root.appendChild(g);
+      });
+      chartHost.innerHTML = "";
+      chartHost.appendChild(root);
+    }
+
+    function showDetail() {
+      detail.textContent = state.selectedK ? describe(state.selectedK) : "Hover over or select a point to see its count.";
     }
 
     function render() {
@@ -745,24 +945,8 @@
       lead.textContent = aspectName(state.aspect) + " at total error budget " + probLabel(state.prob) + ": the certification rate is " +
         fmtPct(vals[0].pct) + " with K = 16, " + fmtPct(vals[1].pct) + " with K = 24, and " + fmtPct(vals[2].pct) + " with K = 32.";
 
-      barsHost.innerHTML = "";
-      Ks.forEach(function (K, i) {
-        var v = vals[i];
-        var row = h("div", { class: "ab-bar-row" + (state.selectedK === K ? " is-selected" : ""), title: describe(K), "aria-label": describe(K) }, [
-          h("div", { class: "ab-bar-label", html: "<i>K</i> = " + K }),
-          h("div", { class: "ab-bar-track" }, [h("span", { class: "ab-bar-fill", style: "width:" + Math.min(100, Math.max(0, v.pct)) + "%" })]),
-          h("div", { class: "ab-bar-value", text: fmtPct(v.pct) }),
-        ]);
-        makeSelectable(row, function () { state.selectedK = K; render(); });
-        barsHost.appendChild(row);
-      });
-      var axis = h("div", { class: "ab-bar-track ab-ticks" });
-      [0, 25, 50, 75, 100].forEach(function (t) {
-        axis.appendChild(h("span", { class: "ab-tick", style: "left:" + t + "%", text: t + "%" }));
-      });
-      barsHost.appendChild(h("div", { class: "ab-bar-row ab-bar-axis", "aria-hidden": "true" }, [h("div", { class: "ab-bar-label" }), axis, h("div", { class: "ab-bar-value" })]));
-
-      detail.textContent = state.selectedK ? describe(state.selectedK) : "Select a bar to see its count.";
+      renderLines();
+      showDetail();
       caption.textContent = "Percentage of the 120 trials in which the test certifies the reference.";
 
       renderAll();
@@ -779,7 +963,7 @@
           var c = syn.cells[key][K][state.prob];
           return h("td", null, [h("span", {
             class: "ab-heat-cell",
-            style: "background:" + heatColor(c.pct) + ";color:" + heatText(c.pct),
+            style: "background:" + heatColor(c.pct, heatStopsFor(allHost)) + ";color:" + heatText(c.pct),
             title: a.name + ", K = " + K + ": " + c.r + " of " + c.n + " trials certified",
             text: fmtPct(c.pct),
           })]);
@@ -793,7 +977,7 @@
       }));
       allHost.innerHTML = "";
       allHost.appendChild(h("div", { class: "ab-scroll" }, [h("table", { class: "ab-heatmap ab-heatmap-aspects" }, [head, body])]));
-      allHost.appendChild(heatLegend("Certification rate"));
+      allHost.appendChild(heatLegend("Certification rate", heatStopsFor(allHost)));
     }
 
     render();
@@ -810,6 +994,200 @@
     };
   }
 
+  // ---------- Introduction: the reference decides who looks better ----------
+
+  // One image x with latent truth Y*(x) = 0 and no annotation noise. Annotator A
+  // labels Y_A = b_A, the model predicts Y_A + e_A, and annotator B labels b_B.
+  // Errors are distances to the reference: A (Equation 1) or the truth (Equation 2).
+  function initIntroBias(container) {
+    var LEARN_ERR = 0.1;  // the model's learning error e_A(x)
+    var B_BIAS = 0.3;     // annotator B's bias b_B(x)
+    var AXIS_MIN = -1, AXIS_MAX = 1, ERR_MAX = 1.2;
+    var bA = 0;
+
+    function pos(v) { return ((v - AXIS_MIN) / (AXIS_MAX - AXIS_MIN) * 100) + "%"; }
+    function num(v) { return (v < 0 ? "\u2212" : "") + Math.abs(v).toFixed(2); }
+
+    var inputId = nextId("ab-range");
+    var input = h("input", { id: inputId, type: "range", min: "-0.8", max: "0.8", step: "0.05", value: "0" });
+    var output = h("output", { class: "ib-value", for: inputId });
+    var controls = h("div", { class: "ab-controls" }, [h("div", { class: "ab-field ib-field" }, [
+      h("label", { for: inputId, html: "Bias of annotator A, <i>b</i><sub>A</sub>(<i>x</i>)" }), input, output,
+    ])]);
+    var status = h("p", { class: "ab-lead ib-status", "aria-live": "polite" });
+
+    var dots = {};
+    var lanes = h("div", { class: "ib-lanes" }, [
+      { key: "truth", label: "Latent truth <i>Y</i><sup>*</sup>(<i>x</i>)" },
+      { key: "a", label: "Annotator A, <i>Y</i><sub>A</sub>(<i>x</i>)" },
+      { key: "model", label: "Model, <i>\u0176</i><sub>A</sub>(<i>x</i>)" },
+      { key: "b", label: "Annotator B, <i>Y</i><sub>B</sub>(<i>x</i>)" },
+    ].map(function (l) {
+      dots[l.key] = h("span", { class: "ib-dot is-" + l.key });
+      return h("div", { class: "ib-lane" }, [
+        h("div", { class: "ib-lane-label", html: l.label }),
+        h("div", { class: "ib-track" }, [h("span", { class: "ib-truth-line", style: "left:" + pos(0) }), dots[l.key]]),
+      ]);
+    }).concat([h("div", { class: "ib-lane ib-axis", "aria-hidden": "true" }, [
+      h("div", { class: "ib-lane-label" }),
+      h("div", { class: "ib-track" }, [-1, -0.5, 0, 0.5, 1].map(function (t) {
+        return h("span", { class: "ab-tick", style: "left:" + pos(t), text: (t < 0 ? "\u2212" : "") + Math.abs(t) });
+      })),
+    ])]));
+
+    function panel(title, sub) {
+      var fills = [h("span", { class: "ib-fill is-model" }), h("span", { class: "ib-fill is-human" })];
+      var vals = [h("span", { class: "ib-num" }), h("span", { class: "ib-num" })];
+      var verdict = h("p", { class: "ib-verdict" });
+      var el = h("div", { class: "ib-panel" }, [
+        h("div", { class: "ib-panel-title", text: title }),
+        h("div", { class: "ib-panel-sub", html: sub }),
+        h("div", { class: "ib-bar-row" }, [h("span", { text: "Model" }), h("span", { class: "ib-bar" }, [fills[0]]), vals[0]]),
+        h("div", { class: "ib-bar-row" }, [h("span", { text: "Annotator B" }), h("span", { class: "ib-bar" }, [fills[1]]), vals[1]]),
+        verdict,
+      ]);
+      function set(modelErr, humanErr) {
+        [modelErr, humanErr].forEach(function (e, i) {
+          fills[i].style.width = Math.min(100, e / ERR_MAX * 100) + "%";
+          vals[i].textContent = e.toFixed(2);
+        });
+        var winner = Math.abs(modelErr - humanErr) < 1e-9 ? "tie" : modelErr < humanErr ? "model" : "human";
+        verdict.className = "ib-verdict is-" + winner;
+        verdict.textContent = winner === "tie" ? "Tie" : winner === "model" ? "The model looks better" : "Annotator B looks better";
+        return winner;
+      }
+      return { el: el, set: set };
+    }
+
+    var selfRef = panel("Annotator A as reference", "Errors measured against <i>Y</i><sub>A</sub>(<i>x</i>), as in Equation 1");
+    var truthRef = panel("Latent truth as reference", "Errors measured against <i>Y</i><sup>*</sup>(<i>x</i>), as in Equation 2");
+
+    container.innerHTML = "";
+    container.appendChild(controls);
+    container.appendChild(status);
+    container.appendChild(lanes);
+    container.appendChild(h("div", { class: "ib-panels" }, [selfRef.el, truthRef.el]));
+
+    function render() {
+      var yA = bA, yModel = bA + LEARN_ERR, yB = B_BIAS;
+      output.textContent = num(bA);
+      dots.truth.style.left = pos(0);
+      dots.a.style.left = pos(yA);
+      dots.model.style.left = pos(yModel);
+      dots.b.style.left = pos(yB);
+      var self = selfRef.set(Math.abs(yModel - yA), Math.abs(yB - yA));
+      var truth = truthRef.set(Math.abs(yModel), Math.abs(yB));
+      var flip = self !== truth && self !== "tie" && truth !== "tie";
+      status.classList.toggle("is-flip", flip);
+      status.textContent = flip
+        ? "The conclusion flips: against annotator A " + (self === "model" ? "the model" : "annotator B") +
+          " looks better, but against the latent truth " + (truth === "model" ? "the model" : "annotator B") + " does."
+        : self === "tie" || truth === "tie"
+          ? "One of the two comparisons is a tie at this bias."
+          : "Both references favor " + (self === "model" ? "the model." : "annotator B.");
+    }
+
+    input.addEventListener("input", function () {
+      bA = parseFloat(input.value);
+      render();
+    });
+    render();
+  }
+
+  // ---------- Hover definitions for the main symbols ----------
+
+  // Keys are the TeX source with spaces and braces removed and trailing
+  // punctuation dropped; `parts` limits a definition to Part tabs (0, 1, 2)
+  // where it holds. Definitions follow the wording of the article.
+  var SYMBOLS = {
+    "\\mu^*": { parts: [0, 1], html: "<b>Latent target</b>: the population-average score on each item; not observed." },
+    "\\widehat\\mu_A": { html: "<b>The model</b>: a prediction rule fitted to annotator A's labels." },
+    "\\Delta_R": { parts: [0], html: "<b>MSE gap</b> with annotator R as the evaluation reference: the model's MSE minus annotator B's MSE, both against R. A negative gap favors the model." },
+    "\\Delta_A": { parts: [0], html: "<b>MSE gap under self-reference</b>: the reference is the training annotator A." },
+    "\\Delta_C": { parts: [0], html: "<b>MSE gap under an external reference</b>: the reference is an annotator C distinct from A and B." },
+    "S_A,C": { parts: [0], html: "<b>Self-reference effect</b>: the change in the MSE gap when C replaces A as the reference, <i>S</i><sub>A,C</sub> = &Delta;<sub>C</sub> &minus; &Delta;<sub>A</sub>. A positive value means self-reference favors the model." },
+    "\\widehatS_A,C": { parts: [0], html: "<b>Estimate of the self-reference effect</b> <i>S</i><sub>A,C</sub> on the evaluation images." },
+    "\\Delta^*": { parts: [1, 2], html: "<b>Latent gap</b>: the gap against the latent target &mu;<sup>*</sup>. Its sign decides whether the model or annotator B is closer to &mu;<sup>*</sup>." },
+    "\\widehat\\mu_\\mathcalR": { parts: [1, 2], html: "<b>Evaluation reference</b>: the average of the surrogate predictors of the <i>K</i> reference annotators." },
+    "\\widehat\\mu_r": { parts: [1, 2], html: "<b>Surrogate predictor</b> of annotator <i>r</i>: a model trained on <i>r</i>'s labels, whose predictions stand in for <i>r</i>'s labels on the evaluation images." },
+    "\\Delta_\\widehat\\mathcalR": { parts: [1, 2], html: "<b>Gap against the evaluation reference</b>: the gap with the evaluation reference in place of the latent target &mu;<sup>*</sup>." },
+    "g_\\widehat\\mathcalR": { parts: [1, 2], html: "<b>Reference distortion</b>: replacing &mu;<sup>*</sup> with the evaluation reference changes the gap by &minus;2<i>g</i>." },
+    "B_\\mathcalR": { parts: [1], html: "<b>Bound on |<i>g</i>|</b> for aggregate scores: |<i>g</i>| &le; <i>B</i><sub>&#x211B;</sub> with probability at least 1 &minus; &alpha;<sub>g</sub> &minus; &gamma; + o(1)." },
+    "B_\\mathcalR^\\mathrmBern": { parts: [2], html: "<b>Bound on |<i>g</i>|</b> for binary labels: |<i>g</i>| &le; <i>B</i><sub>&#x211B;</sub><sup>Bern</sup> with probability at least 1 &minus; &alpha;<sub>g</sub> &minus; &gamma; + o(1)." },
+    "K": { parts: [1, 2], html: "<b>Number of reference annotators.</b>" },
+    "\\tau_g": { parts: [1], html: "<b>Scale of the distortion</b> under the Gaussian assumption <i>g</i> ~ N(0, &tau;<sub>g</sub><sup>2</sup>) for each annotator." },
+    "U_g": { parts: [1], html: "<b>Upper confidence bound</b> for &tau;<sub>g</sub>, with Pr(&tau;<sub>g</sub> &le; <i>U</i><sub>g</sub>) &ge; 1 &minus; &gamma; + o(1)." },
+    "\\tau": { parts: [2], html: "<b>Standard deviation of the logit offsets</b> <i>C</i><sub>r</sub> across annotators." },
+    "U_\\tau": { parts: [2], html: "<b>Upper confidence bound</b> for &tau;, with Pr(&tau; &le; <i>U</i><sub>&tau;</sub>) &ge; 1 &minus; &gamma; + o(1)." },
+    "\\kappa": { parts: [2], html: "<b>Sensitivity parameter</b> of the bounded item-dependent variation assumption; it cannot be obtained by calibration and must be specified in advance." },
+    "\\rho": { parts: [2], html: "&rho; = (<i>N</i> + 1)/(<i>n</i><sub>1</sub> + 1), where <i>N</i> is the number of images in <i>D</i><sub>1</sub> on which the model and annotator B disagree." },
+    "D_1": { parts: [1, 2], html: "<b>Evaluation set</b>: <i>n</i><sub>1</sub> images labeled by B, on which the gap is estimated." },
+    "D_2": { parts: [1, 2], html: "<b>Calibration set</b>: <i>n</i><sub>2</sub> images labeled by B, on which the bound on |<i>g</i>| is calibrated." },
+  };
+
+  function symbolKey(tex) {
+    return tex.replace(/[\s{}]/g, "").replace(/[.,;:]+$/, "");
+  }
+
+  function partIndexOf(el) {
+    var pane = el.closest("#research-parts > .tab-content > .tab-pane");
+    return pane ? Array.prototype.indexOf.call(pane.parentNode.children, pane) : -1;
+  }
+
+  // A symbol gets a hover definition only where the reader has not seen it for
+  // a while: at least SYMBOL_GAP paragraphs after its previous mention, or its
+  // first mention in a Part tab. Its first mention overall (usually where it is
+  // defined) gets none. Folded callouts are skipped: they neither count as a
+  // mention nor get definitions.
+  var SYMBOL_GAP = 12;
+
+  function initSymbolNotes() {
+    if (!window.tippy || !window.MathJax || !MathJax.startup || !MathJax.startup.document) return;
+    var content = document.getElementById("quarto-document-content");
+    if (!content) return;
+    var blocks = Array.prototype.filter.call(content.querySelectorAll("p, li"), function (b) {
+      return !b.closest(".callout, .tippy-box, #refs, .column-margin");
+    });
+    var items = Array.from(MathJax.startup.document.math).filter(function (item) {
+      var root = item.typesetRoot;
+      return root && root.isConnected && !root.closest(".callout, .tippy-box, #refs, .column-margin");
+    }).map(function (item) {
+      var root = item.typesetRoot;
+      var block = root.closest("p, li");
+      return { item: item, root: root, tex: symbolKey(String(item.math)), block: blocks.indexOf(block), part: partIndexOf(root) };
+    }).filter(function (m) { return m.block !== -1; });
+    items.sort(function (a, b) { return a.block - b.block || (a.root.compareDocumentPosition(b.root) & 2 ? 1 : -1); });
+
+    var last = {};  // symbol key -> {block, part} of its previous mention
+    items.forEach(function (m) {
+      var key = SYMBOLS[m.tex] ? m.tex : m.tex.replace(/\((x|X)\)$/, "");
+      var def = !m.item.display && SYMBOLS[key];
+      var prev = def ? last[key] : null;
+      var stale = prev && (prev.part !== m.part || m.block - prev.block >= SYMBOL_GAP);
+      // Record every symbol this formula mentions, standalone or inside it.
+      Object.keys(SYMBOLS).forEach(function (k) {
+        if (m.tex.indexOf(k) !== -1) last[k] = { block: m.block, part: m.part };
+      });
+      if (!def || !stale) return;
+      if (def.parts && def.parts.indexOf(m.part) === -1) return;
+      var root = m.root;
+      root.classList.add("has-def");
+      window.tippy(root, {
+        content: def.html,
+        allowHTML: true,
+        theme: "quarto",
+        maxWidth: 360,
+        placement: "top",
+        delay: [120, 0],
+        appendTo: function () { return document.body; },
+      });
+    });
+  }
+
+  window.addEventListener("load", function () {
+    if (window.MathJax && MathJax.startup && MathJax.startup.promise) MathJax.startup.promise.then(initSymbolNotes);
+  });
+
   // ---------- wiring ----------
 
   function widget(name) {
@@ -818,6 +1196,7 @@
 
   function init() {
     var el;
+    if ((el = widget("intro-bias"))) initIntroBias(el);
     if ((el = widget("scalar-matrix"))) initScalarMatrix(el);
     if ((el = widget("bernoulli-task1"))) controllers["bernoulli-task1"] = initBernoulli(el, widget("bernoulli-change"));
     if ((el = widget("continuous-heatmap"))) initContinuousHeatmap(el);

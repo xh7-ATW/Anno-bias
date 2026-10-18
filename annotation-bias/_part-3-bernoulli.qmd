@@ -1,4 +1,6 @@
+::: {.takeaway}
 **Takeaway.** For binary labels, annotator bias is modeled on the logit scale, so the test of [Part II](#part-2) requires a new, more conservative bound on $g_{\widehat{\mathcal R}}.$ Since our real-data setting (R11–R16) offers at most four reference annotators, we evaluate the test on synthetic labels generated for a larger pool of annotators on VinDr-CXR images. On these semi-synthetic data, the certification rate of the modified test increases with the number of reference annotators.
+:::
 
 [Part II](#part-2) works with the aggregate score. This part turns to the $27$ binary labels and asks the same question for each finding: when is a panel of reference annotators reliable for a model–human comparison?
 
@@ -277,7 +279,7 @@ Percentage of the 120 trials in which the test certifies the reference.
 
 :::
 
-How often the test certifies the reference. Certification rate for the selected finding by number of reference annotators $K,$ at the selected total error budget $\alpha.$
+How often the test certifies the reference. Certification rate for the selected finding by number of reference annotators $K,$ one line per total error budget $\alpha;$ the line of the selected budget is drawn thicker.
 
 :::
 

@@ -11,7 +11,17 @@ resources:
   - data/
 format:
   html:
-    toc: false
+    toc: true
+    toc-location: left
+    toc-title: "Contents"
+    toc-depth: 3
+    reference-location: margin
+    title-block-banner: "#f3f5f7"
+    title-block-banner-color: "#25282b"
+    grid:
+      sidebar-width: 220px
+      body-width: 900px
+      margin-width: 220px
     number-sections: false
     html-math-method:
       method: mathjax
@@ -26,6 +36,30 @@ Xuhe Zhang[^amcs-affil], Ying Jin[^wharton-affil]
 [^amcs-affil]: AMCS, UPenn
 [^wharton-affil]: Wharton, UPenn
 
+::::::: {.tldr}
+[TL;DR]{.tldr-label}
+
+:::::: {.tldr-cards}
+::: {.tldr-card .part-1}
+[Part I · Self-reference](#part-1){.tldr-link}
+
+A model evaluated against the annotator who labeled its training data looks better than it would against an independent annotator. We show that this holds on average over annotators in theory, and our tests detect it in real chest X-ray annotations from VinDr-CXR.
+:::
+
+::: {.tldr-card .part-2}
+[Part II · Continuous](#part-2){.tldr-link}
+
+A panel of reference annotators is reliable for a model–human comparison if it reaches the same conclusion as the latent target. We develop a test that identifies reliable panels without observing the latent target and controls the probability of a false certification, and we apply it to real chest X-ray annotations from VinDr-CXR.
+:::
+
+::: {.tldr-card .part-3}
+[Part III · Bernoulli](#part-3){.tldr-link}
+
+For binary labels, annotator bias is modeled on the logit scale, so the test of [Part II](#part-2) requires a new, more conservative bound on $g_{\widehat{\mathcal R}}.$ Since our real-data setting (R11–R16) offers at most four reference annotators, we evaluate the test on synthetic labels generated for a larger pool of annotators on VinDr-CXR images. On these semi-synthetic data, the certification rate of the modified test increases with the number of reference annotators.
+:::
+::::::
+:::::::
+
 ## Introduction {#introduction}
 
 Artificial intelligence (AI) models are increasingly being used to assist with or automate tasks that have traditionally relied on human annotation and expert judgment. Examples include interpreting medical images [@aggarwal2021diagnostic], identifying harmful or toxic online content [@gorwa2020algorithmic], and evaluating or ranking generated responses [@ouyang2022training]. For these tasks, human annotations often provide the supervision used to train the models [@prabhakaran2024grasp; @uma2021learning].
@@ -35,26 +69,72 @@ When annotators' judgments leave consistent patterns in the labels they provide,
 
 Such systematic bias in annotation can affect the performance comparisons between trained models and human annotators (hereafter *model–human comparisons*). These comparisons have attracted considerable attention in medical imaging [@liu2019comparison; @nagendran2020artificial; @ahmad2023machine]. For example, in chest X-ray interpretation, @irvin2019chexpert reports that its model outperformed individual radiologists on several findings, while @wu2020comparison reports higher specificity and precision for an AI model than for radiology residents. Both studies used reference labels established by panels of specialists through majority voting or consensus. However, the former study did not report whether the training annotators overlapped with the reference experts, while in the latter, one of the reference experts was also involved in training. Now we use a simple model to explain how annotation bias can affect model–human comparisons under this overlap.
 
+::: {#intro-bias .ab-result .intro-bias}
+::: {.ab-widget data-widget="intro-bias"}
+This interactive figure requires JavaScript.
+:::
+
+[Errors of the model and of annotator B on a single image $x,$ with latent truth $Y^*(x)=0$ and no annotation noise. Annotator A labels the image $Y_A(x)=Y^*(x)+b_A(x);$ the model trained on A predicts $\widehat Y_A(x)=Y_A(x)+\widehat e_A(x)$ with learning error $\widehat e_A(x)=0.1;$ annotator B labels it $Y_B(x)=Y^*(x)+b_B(x)$ with $b_B(x)=0.3.$ Each error is the distance to the reference: annotator A on the left, as in @eq-intro-self-ref, and the latent truth on the right, as in @eq-intro-latent-ref. Drag the slider to change A's bias $b_A(x).$]{.ab-caption}
+:::
+
 Denoting the label given by an annotator $i$ on object $x$ as $Y_i(x)$ and the corresponding latent truth as $Y^*(x),$ we write
 $$Y_i(x) = Y^*(x) + b_i(x) + \epsilon_{i,x},$$
 where $b_i(x)$ is the systematic bias of annotator $i$ and $\epsilon_{i,x}$ is the noise. Suppose a model $\widehat Y_A$ is trained on annotator A and compared with annotator B. Assume the reference is again the annotator A and the comparison is on dataset $\mathcal{D}.$ Then the model–human comparison is between 
 $\sum_{x \in \mathcal{D}} || \widehat Y_A (x) - Y_A (x) ||$ and $\sum_{x \in \mathcal{D}} || Y_B (x) - Y_A (x) ||,$
-which can also be written as
-$$ \sum_{x \in \mathcal{D}} || \widehat e_A (x) - \epsilon_{A,x} || \quad \mathrm{versus} \quad  \sum_{x \in \mathcal{D}} ||\big(b_B(x) - b_A(x)\big) + \epsilon_{B,x} - \epsilon_{A,x}||.$$ {#eq-intro-self-ref}
-Here $\widehat e_A (x)$ captures the approximation error and training error arising from finite samples and incomplete optimization, and the rewrite holds under mild conditions^[Sufficient conditions are that $\mathbb{E}[\epsilon_{A,x}\mid x]=0$ and that MSE is used as the training loss.]. 
-Similarly, when the latent truth is chosen as the reference, we can rewrite the actual model–human comparison, between $\sum_{x \in \mathcal{D}} ||\widehat Y_A (x) - Y^*(x)||$ and $\sum_{x \in \mathcal{D}} ||Y_B (x) - Y^*(x)||$ as
-$$ \sum_{x \in \mathcal{D}} || \widehat e_A (x) + b_A(x) || \quad \mathrm{versus} \quad  \sum_{x \in \mathcal{D}} ||b_B(x) + \epsilon_{B,x} ||.$$ {#eq-intro-latent-ref}
-The comparison in @eq-intro-self-ref may favor the model's performance relative to that in @eq-intro-latent-ref: the bias term $b_A$ cancels from the error of the model $\widehat Y_A$ and instead enters the error of the human annotator $Y_B.$
+which can also be written as @eq-intro-self-ref on the left below. Similarly, when the latent truth is chosen as the reference, we can rewrite the actual model–human comparison, between $\sum_{x \in \mathcal{D}} ||\widehat Y_A (x) - Y^*(x)||$ and $\sum_{x \in \mathcal{D}} ||Y_B (x) - Y^*(x)||$ as @eq-intro-latent-ref on the right.
+
+:::: {.eq-pair}
+::: {.eq-col}
+[Annotator A as reference]{.eq-col-title}
+
+$$
+\begin{gathered}
+\sum_{x \in \mathcal{D}} || \widehat e_A (x) \mathbin{\textcolor{#A3A9AF}{+}} \textcolor{#A3A9AF}{\cancel{b_A(x)}} \mathbin{\textcolor{#A3A9AF}{-}} \textcolor{#A3A9AF}{\cancel{b_A(x)}} - \epsilon_{A,x} || \\
+\mathrm{versus} \\
+\sum_{x \in \mathcal{D}} ||\big(b_B(x) - \textcolor{#B5482E}{b_A(x)}\big) + \epsilon_{B,x} - \epsilon_{A,x}||
+\end{gathered}
+$$ {#eq-intro-self-ref}
+:::
+
+::: {.eq-col}
+[Latent truth as reference]{.eq-col-title}
+
+$$
+\begin{gathered}
+\sum_{x \in \mathcal{D}} || \widehat e_A (x) + \textcolor{#B5482E}{b_A(x)} || \\
+\mathrm{versus} \\
+\sum_{x \in \mathcal{D}} ||b_B(x) + \epsilon_{B,x} ||
+\end{gathered}
+$$ {#eq-intro-latent-ref}
+:::
+::::
+
+Here $\widehat e_A (x)$ captures the approximation error and training error arising from finite samples and incomplete optimization, and the rewrite holds under mild conditions^[Sufficient conditions are that $\mathbb{E}[\epsilon_{A,x}\mid x]=0$ and that MSE is used as the training loss.]. The comparison in @eq-intro-self-ref may favor the model's performance relative to that in @eq-intro-latent-ref: the bias term $b_A$ cancels from the error of the model $\widehat Y_A$ and instead enters the error of the human annotator $Y_B.$
 
 Aside from the analysis above, previous work has also shown that models can learn systematic tendencies in how individual annotators label data [@binns2017like; @geva2019we; @nichyporuk2022rethinking]. A reported model advantage may therefore reflect, in part, agreement with the reference's annotation patterns. However, several questions remain open, particularly in real-world medical applications:
 
-- **To what extent does annotation bias affect model–human comparisons?**
-- **Could accounting for this bias reverse the conclusion?**
-- **How can we identify an annotator whose labels can serve as a reliable reference for such comparisons?**
+::::: {.question-cards}
+::: {.question-card}
+**To what extent does annotation bias affect model–human comparisons?**
+
+[Part I →](#part-1){.question-link}
+:::
+
+::: {.question-card}
+**Could accounting for this bias reverse the conclusion?**
+
+[Part II →](#part-2){.question-link}
+:::
+
+::: {.question-card}
+**How can we identify an annotator whose labels can serve as a reliable reference for such comparisons?**
+
+[Part II →](#part-2){.question-link} [Part III →](#part-3){.question-link}
+:::
+:::::
 
 To address these questions, we focus on predicting thoracic abnormalities from chest X-rays using the VinDr-CXR dataset [@PhysioNet-vindr-cxr-1.0.0; @nguyen2022vindr], accessed through PhysioNet [@pollard_physionet_2026], which provides independent annotations from multiple radiologists for the same images. We train models on individual radiologists' labels and compare their performance with that of other radiologists under different evaluation references. This setting allows us to examine how the choice of training annotator and evaluation reference affects the conclusions of model–human comparisons.
 
-The article proceeds in three parts. [Part I](#part-1) formulates annotation bias and develops a statistical test for whether using the training annotator as the evaluation reference favors the model, supported by experiments on VinDr-CXR. In [Part II](#part-2), we consider scores obtained by aggregating binary labels across abnormality categories, and develop a statistical test to assess whether a reference annotator is reliable for the model–human performance comparison. [Part III](#part-3) extends the analysis to binary abnormality labels using a Bernoulli formulation.
 
 
 ::::: {.panel-tabset #research-parts}
@@ -91,9 +171,9 @@ Beyond model–human comparisons, a natural next step is to extend the framework
 :::
 
 ```{=html}
-<script src="article-tabs.js?v=2"></script>
+<script src="article-tabs.js?v=3"></script>
 <script src="data/results-data.js?v=5"></script>
-<script src="results.js?v=31"></script>
+<script src="results.js?v=34"></script>
 <script>
 // Local preview only: reload when the rendered page changes on disk.
 // Quarto's own preview reload does not fire reliably here; this checks the

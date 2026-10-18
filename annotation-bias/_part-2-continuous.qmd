@@ -1,4 +1,6 @@
+::: {.takeaway}
 **Takeaway.** A panel of reference annotators is reliable for a model–human comparison if it reaches the same conclusion as the latent target. We develop a test that identifies reliable panels without observing the latent target and controls the probability of a false certification, and we apply it to real chest X-ray annotations from VinDr-CXR.
+:::
 
 In this part, we consider the aggregate-score setting of [I.1](#aggregate-score): each radiologist's $27$ binary labels on an image are averaged into one score, modeled as a continuous variable in $[0,1],$ on which the models are trained and the model–human comparisons are made. [Part III](#part-3) considers the binary labels of [I.2](#binary-labels).
 

@@ -1,7 +1,7 @@
-"""Split references/REQUESTED_CSV_JSON_DATA_DUMP_FOR_AGENT.md into the data/
-files and build data/results-data.js for the interactive result components.
+"""Split data/results-dump.md into the data/ files and build
+data/results-data.js for the interactive result components.
 Part III (semi-synthetic Bernoulli Task II) comes from the official per-finding
-results in references/part_iii_per_finding_detailed.csv instead of the dump.
+results in data/part3-semisynthetic/per-finding.csv instead of the dump.
 
 Run from the project root:  python data/extract_from_dump.py
 """
@@ -15,24 +15,23 @@ from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DUMP = ROOT / "references" / "REQUESTED_CSV_JSON_DATA_DUMP_FOR_AGENT.md"
 DATA = ROOT / "data"
-SYNTH_CSV = ROOT / "references" / "part_iii_per_finding_detailed.csv"
-SYNTH_SETTING = ROOT / "references" / "SYNTHETIC_BERNOULLI_OFFICIAL_GENERATION_SETTING.md"
+DUMP = DATA / "results-dump.md"
+SYNTH_CSV = DATA / "part3-semisynthetic" / "per-finding.csv"
 # total error budgets shown in Part III, as CSV value -> display key
 SYNTH_ALPHAS = {"0.1": "0.10", "0.15": "0.15", "0.2": "0.20"}
 
 OUTPUT_PATHS = {
-    "SCALAR_TASK_I_SUMMARY": "task1-scalar/summary.csv",
-    "REAL_BERNOULLI_TASK_I_SUMMARY": "task1-bernoulli/summary.csv",
-    "REAL_BERNOULLI_TASK_I_THRESHOLDED_META": "task1-bernoulli/thresholded-meta.json",
-    "REAL_BERNOULLI_TASK_I_THRESHOLDS": "task1-bernoulli/thresholds.csv",
-    "REAL_BERNOULLI_TASK_I_TEMPERATURE_CALIBRATION_JSON": "task1-bernoulli/calibration/temperature.json",
-    "REAL_BERNOULLI_TASK_I_TEMPERATURE_CALIBRATION_SUMMARY": "task1-bernoulli/calibration/calibration-summary.csv",
-    "REAL_BERNOULLI_TASK_I_TEMPERATURE_CALIBRATION_PER_ASPECT": "task1-bernoulli/calibration/calibration-aspects.csv",
-    "CONTINUOUS_TASK_II_EXHAUSTIVE_SUMMARY": "task2-scalar/configurations.csv",
-    "CONTINUOUS_TASK_II_TRUE_RATE_BY_K_PROB": "task2-scalar/by-k-prob.csv",
-    "CONTINUOUS_TASK_II_METADATA": "task2-scalar/meta.json",
+    "SCALAR_TASK_I_SUMMARY": "part1-aggregate/summary.csv",
+    "REAL_BERNOULLI_TASK_I_SUMMARY": "part1-binary/summary.csv",
+    "REAL_BERNOULLI_TASK_I_THRESHOLDED_META": "part1-binary/thresholded-meta.json",
+    "REAL_BERNOULLI_TASK_I_THRESHOLDS": "part1-binary/thresholds.csv",
+    "REAL_BERNOULLI_TASK_I_TEMPERATURE_CALIBRATION_JSON": "part1-binary/calibration/temperature.json",
+    "REAL_BERNOULLI_TASK_I_TEMPERATURE_CALIBRATION_SUMMARY": "part1-binary/calibration/calibration-summary.csv",
+    "REAL_BERNOULLI_TASK_I_TEMPERATURE_CALIBRATION_PER_ASPECT": "part1-binary/calibration/calibration-aspects.csv",
+    "CONTINUOUS_TASK_II_EXHAUSTIVE_SUMMARY": "part2-aggregate/configurations.csv",
+    "CONTINUOUS_TASK_II_TRUE_RATE_BY_K_PROB": "part2-aggregate/by-k-prob.csv",
+    "CONTINUOUS_TASK_II_METADATA": "part2-aggregate/meta.json",
 }
 
 
@@ -248,11 +247,6 @@ def main():
         path = DATA / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(blocks[name], encoding="utf-8")
-
-    synth_dir = DATA / "task2-bernoulli"
-    synth_dir.mkdir(parents=True, exist_ok=True)
-    (synth_dir / "per-finding.csv").write_text(SYNTH_CSV.read_text(encoding="utf-8"), encoding="utf-8")
-    (synth_dir / "generation-setting.md").write_text(SYNTH_SETTING.read_text(encoding="utf-8"), encoding="utf-8")
 
     payload = build_payload(blocks)
     failures = check(payload)

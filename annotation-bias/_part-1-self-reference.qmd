@@ -1,4 +1,6 @@
+::: {.takeaway}
 **Takeaway.** A model evaluated against the annotator who labeled its training data looks better than it would against an independent annotator. We show that this holds on average over annotators in theory, and our tests detect it in real chest X-ray annotations from VinDr-CXR.
+:::
 
 ### Data: VinDr-CXR
 
@@ -50,6 +52,45 @@ $$
 $$ {#eq-comparison-gap}
 
 A negative gap favors the model and a positive gap favors the human annotator. The reference can be the training annotator itself, $R=A$ (*self-reference*), or another annotator, $R=C$ (*external reference*). @tbl-roles summarizes the roles and notation of this comparison.
+
+```{=html}
+<figure class="setup-diagram">
+<svg viewBox="0 0 650 250" role="img" aria-labelledby="setup-diagram-title">
+<title id="setup-diagram-title">Annotator A's labels train the model; the model's predictions and annotator B's labels are both measured against the reference annotator R; in self-reference, R is A.</title>
+<defs>
+<marker id="sd-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="sd-head"/></marker>
+<marker id="sd-arrow-self" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="sd-head-self"/></marker>
+</defs>
+<path class="sd-edge" d="M230,51 H282" marker-end="url(#sd-arrow)"/>
+<text class="sd-edge-label" x="256" y="43">trains</text>
+<path class="sd-edge" d="M425,51 H558 V92" marker-end="url(#sd-arrow)"/>
+<text class="sd-edge-label" x="494" y="43">predictions</text>
+<path class="sd-edge" d="M230,130 H469" marker-end="url(#sd-arrow)"/>
+<text class="sd-edge-label" x="360" y="122">labels</text>
+<path class="sd-edge" d="M230,209 H558 V168" marker-end="url(#sd-arrow)"/>
+<text class="sd-edge-label" x="396" y="201">reference labels</text>
+<path class="sd-self" d="M50,64 C12,98 12,170 47,200" marker-end="url(#sd-arrow-self)"/>
+<text class="sd-self-label" x="17" y="132" transform="rotate(-90 17 132)">self-reference: R = A</text>
+<rect class="sd-box is-a" x="50" y="25" width="180" height="52" rx="8"/>
+<text class="sd-name" x="140" y="47">Annotator A</text>
+<text class="sd-note" x="140" y="66">labels the training data</text>
+<rect class="sd-box" x="285" y="25" width="140" height="52" rx="8"/>
+<text class="sd-name" x="355" y="47">Model</text>
+<text class="sd-note" x="355" y="66">trained on A's labels</text>
+<rect class="sd-box" x="50" y="104" width="180" height="52" rx="8"/>
+<text class="sd-name" x="140" y="126">Annotator B</text>
+<text class="sd-note" x="140" y="145">the compared human</text>
+<rect class="sd-box is-r" x="50" y="183" width="180" height="52" rx="8"/>
+<text class="sd-name" x="140" y="205">Reference annotator R</text>
+<text class="sd-note" x="140" y="224">labels used for evaluation</text>
+<rect class="sd-box is-gap" x="472" y="95" width="172" height="70" rx="8"/>
+<text class="sd-name" x="558" y="122">MSE gap Δ<tspan baseline-shift="sub" font-size="11">R</tspan></text>
+<text class="sd-note" x="558" y="141">model's MSE − B's MSE,</text>
+<text class="sd-note" x="558" y="156">both measured against R</text>
+</svg>
+<figcaption>Roles in a model–human comparison. The model is trained on annotator A's labels; its predictions and annotator B's labels are both measured against the labels of the reference annotator R. In the self-reference setting (dashed loop), the training annotator is also the reference, R = A.</figcaption>
+</figure>
+```
 
 | Role | Symbol | What it represents |
 |:-------------------:|:--------:|:----------------------------------------:|
@@ -243,7 +284,7 @@ The test detects a positive self-reference effect in both comparisons for the R8
 
 :::
 
-Self-reference test for the aggregate score. One-sided p-values for a positive self-reference effect over $1{,}500$ held-out images; nominal level $0.01.$ In each comparison the external reference is the remaining radiologist.
+Self-reference test for the aggregate score. One-sided p-values for a positive self-reference effect over $1{,}500$ held-out images; nominal level $0.01.$ In each comparison the external reference is the remaining radiologist. Each row is one comparison, with its dot at $-\log_{10}$ of the p-value; the dashed line marks the level $0.01,$ and filled dots, to its right, are significant.
 
 :::
 
@@ -371,7 +412,7 @@ Atelectasis: a positive self-reference effect is detected in $1$ of $6$ comparis
 
 :::
 
-Self-reference test for each finding. One-sided p-values over $1{,}500$ held-out images; unadjusted nominal tests. In each comparison the external reference is the remaining radiologist. "No variation" marks tests in which every paired term $Z_i$ is zero.
+Self-reference test for each finding. One-sided p-values over $1{,}500$ held-out images; unadjusted nominal tests. In each comparison the external reference is the remaining radiologist. Each row is one finding and each dot one of its comparisons, placed at $-\log_{10}$ of the p-value; the dashed line marks the selected level, and filled dots, to its right, are significant. The table lists the six p-values of the selected finding. "No variation" marks tests in which every paired term $Z_i$ is zero.
 
 :::
 
