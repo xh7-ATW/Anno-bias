@@ -1,0 +1,9 @@
+[build]
+publish = "_site"
+
+[[plugins]]
+package = "@quarto/netlify-plugin-quarto"
+
+[plugins.inputs]
+version = "v1.10.18"
+cmd = "render annotation-bias.qmd --to html --output index.html --output-dir _site"
