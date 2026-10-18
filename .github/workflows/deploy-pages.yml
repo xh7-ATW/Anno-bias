@@ -1,0 +1,66 @@
+# Build the blog post (single-file Quarto, no _quarto.yml) and deploy it to
+# GitHub Pages at https://xh7-ATW.github.io/Anno-bias/.
+#
+# The page's scripts and data reach _site through the `resources:` list in the
+# front matter of annotation-bias.qmd, and the stylesheet through `css:`.
+# Every reference in the page is relative, so the /Anno-bias/ subpath needs
+# no special handling.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer push does not cancel one in progress.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v6
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          # Same version as the local preview and the Netlify build.
+          version: 1.10.18
+
+      - name: Render the post
+        run: quarto render annotation-bias.qmd --to html --output index.html --output-dir _site
+
+      - name: Check that the page's files are in the site
+        run: |
+          for f in index.html annotation-bias.css article-tabs.js results.js data/results-data.js; do
+            test -f "_site/$f" || { echo "Missing _site/$f"; exit 1; }
+          done
+          test -d _site/annotation-bias_files/libs || { echo "Missing _site/annotation-bias_files/libs"; exit 1; }
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

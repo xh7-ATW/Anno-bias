@@ -8,7 +8,7 @@ bibliography: references.bib
 resources:
   - article-tabs.js
   - results.js
-  - data/
+  - data/results-data.js
 format:
   html:
     toc: true
