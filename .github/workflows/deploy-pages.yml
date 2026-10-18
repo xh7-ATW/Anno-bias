@@ -33,7 +33,7 @@ jobs:
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
         with:
-          # Same version as the local preview and the Netlify build.
+          # Same version as the local preview.
           version: 1.10.18
 
       - name: Render the post

@@ -68,8 +68,23 @@ body {
 .article-authors {
   text-align: center;
   font-size: 17.5px;
-  color: var(--article-muted);
+  color: var(--article-ink);
   margin: 0.25em 0 1.5em;
+}
+
+/* Inside the title banner, directly under the subtitle */
+.quarto-title .article-authors {
+  margin: 1em 0 0;
+}
+
+.article-authors p {
+  margin: 0;
+}
+
+.article-affils {
+  display: block;
+  margin-top: 0.2em;
+  font-size: 15px;
 }
 
 .article-authors sup {

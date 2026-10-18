@@ -30,11 +30,21 @@ format:
 ---
 
 ::: {.article-authors}
-Xuhe Zhang[^amcs-affil], Ying Jin[^wharton-affil]
+Xuhe Zhang^1^, Ying Jin^2^
+
+[^1^ AMCS, UPenn&emsp;^2^ Wharton, UPenn]{.article-affils}
 :::
 
-[^amcs-affil]: AMCS, UPenn
-[^wharton-affil]: Wharton, UPenn
+```{=html}
+<script>
+// Show the author line inside the title banner, under the subtitle.
+(function () {
+  var authors = document.querySelector(".article-authors");
+  var title = document.querySelector("#title-block-header .quarto-title");
+  if (authors && title) title.appendChild(authors);
+})();
+</script>
+```
 
 ::::::: {.tldr}
 [TL;DR]{.tldr-label}

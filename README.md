@@ -23,4 +23,4 @@ It contains the source of the post and the result files behind its figures and i
 | `annotation-bias.css` | Page style. |
 | `references.bib` | Bibliography. |
 | `theory/` | Theory derivations behind the tests (PDF). |
-| `netlify.toml`, `package.json` | Rebuild the post on Netlify on every push to `main`. |
+| `.github/workflows/deploy-pages.yml` | Rebuilds the post and deploys it to GitHub Pages on every push to `main`. |
