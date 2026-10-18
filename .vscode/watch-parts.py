@@ -1,8 +1,8 @@
-"""Re-render annotation-bias.qmd whenever one of its Part include files is saved.
+"""Re-render annotation-bias.qmd whenever it or one of its Part include files is saved.
 
-The Quarto extension only renders on save of the main file, not of the files it
-includes, so this watches annotation-bias/*.qmd and runs `quarto render`.
-Saving annotation-bias.qmd itself is still handled by the extension.
+The Quarto extension's render-on-save does not fire reliably (and never for the
+included Part files), so this watches annotation-bias.qmd and
+annotation-bias/*.qmd and runs `quarto render`.
 """
 import glob
 import os
@@ -29,7 +29,7 @@ quarto = shutil.which("quarto") or os.path.expandvars(r"%LOCALAPPDATA%\Programs\
 
 def snapshot():
     state = {}
-    for path in glob.glob(PATTERN):
+    for path in glob.glob(PATTERN) + [os.path.join(ROOT, MAIN)]:
         try:
             state[path] = os.path.getmtime(path)
         except OSError:
@@ -38,7 +38,7 @@ def snapshot():
 
 
 seen = snapshot()
-print(f"Watching {len(seen)} Part files in {os.path.dirname(PATTERN)}", flush=True)
+print(f"Watching {MAIN} and {len(seen) - 1} Part files", flush=True)
 while True:
     time.sleep(1)
     now = snapshot()

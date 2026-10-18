@@ -22,24 +22,23 @@ As for $\widehat\mu_A$ in [I.1](#aggregate-score), write $\widehat\mu_r=\mu_r+\w
 - **Centered error:** $\mathbb E_X[\widehat e_r(X)]=0.$ Averaged over items, the surrogate predictor neither overestimates nor underestimates annotator $r$'s mean score.
 - **Independence:** $\widehat e_r(X)\perp\big(\widehat\mu_A(X)-Y_B(X)\big),$ as random variables of the item $X$ and B's annotation noise, with all trained predictors held fixed. The error of a surrogate predictor on an item is unrelated to the difference between the model and B on that item.
 
-With $\widehat e_{\mathcal R}=K^{-1}\sum_{r\in\mathcal R}\widehat e_r,$ the learning error of the evaluation reference, they give the orthogonality condition
+Together, they give the orthogonality condition, for every $r\in\mathcal R,$
 
 $$
-\mathbb E_{X,\epsilon}\big[\widehat e_{\mathcal R}(X)\,(\widehat\mu_A(X)-Y_B(X))\big]=0.
+\mathbb E_{X,\epsilon}\big[\widehat e_r(X)\,(\widehat\mu_A(X)-Y_B(X))\big]=0.
 $$ {#eq-reference-orthogonality}
 
 Both assumptions require the surrogate predictors to be trained on data disjoint from the evaluation images.
 
 ::: {.callout-note collapse="true" title="Deriving the orthogonality condition"}
 
-Since $\widehat e_{\mathcal R}$ is the average of the $\widehat e_r,$ the expectation splits into a sum over the reference annotators. With all trained predictors held fixed, the independence assumption lets each expectation of a product factor into a product of expectations. Since $\widehat e_r(X)$ does not depend on the annotation noise, its expectation reduces to an average over items, which vanishes by the centered-error assumption:
+With all trained predictors held fixed, the independence assumption lets the expectation of the product factor into a product of expectations. Since $\widehat e_r(X)$ does not depend on the annotation noise, its expectation reduces to an average over items, which vanishes by the centered-error assumption:
 
 $$
 \begin{aligned}
-\mathbb E_{X,\epsilon}\big[\widehat e_{\mathcal R}(X)\,(\widehat\mu_A(X)-Y_B(X))\big]
-&=\frac1K\sum_{r\in\mathcal R}\mathbb E_{X,\epsilon}\big[\widehat e_r(X)\,(\widehat\mu_A(X)-Y_B(X))\big]\\
-&=\frac1K\sum_{r\in\mathcal R}\mathbb E_{X,\epsilon}\big[\widehat e_r(X)\big]\;\mathbb E_{X,\epsilon}\big[\widehat\mu_A(X)-Y_B(X)\big]\\
-&=\frac1K\sum_{r\in\mathcal R}\mathbb E_X\big[\widehat e_r(X)\big]\;\mathbb E_{X,\epsilon}\big[\widehat\mu_A(X)-Y_B(X)\big]=0.
+\mathbb E_{X,\epsilon}\big[\widehat e_r(X)\,(\widehat\mu_A(X)-Y_B(X))\big]
+&=\mathbb E_{X,\epsilon}\big[\widehat e_r(X)\big]\;\mathbb E_{X,\epsilon}\big[\widehat\mu_A(X)-Y_B(X)\big]\\
+&=\mathbb E_X\big[\widehat e_r(X)\big]\;\mathbb E_{X,\epsilon}\big[\widehat\mu_A(X)-Y_B(X)\big]=0.
 \end{aligned}
 $$
 
@@ -138,7 +137,7 @@ g_{\widehat r}
 +\mathbb E_X\big[\widehat e_r(X)(\widehat\mu_A(X)-\mu_B(X))\big].
 $$
 
-The second term vanishes for every $r$ by the centered-error and independence assumptions, so $g_{\widehat r}$ equals the first term. Conditional on $\widehat\mu_A$ and B, the first term is random only through which annotator is drawn. Suppose that for any finite collection of items $x_1,\ldots,x_n,$ the vector $(b_r(x_1),\ldots,b_r(x_n))$ is jointly Gaussian over the annotator population. Then the finite-sample version of the first term,
+The second term vanishes for every $r$ by @eq-reference-orthogonality, so $g_{\widehat r}$ equals the first term. Conditional on $\widehat\mu_A$ and B, the first term is random only through which annotator is drawn. Suppose that for any finite collection of items $x_1,\ldots,x_n,$ the vector $(b_r(x_1),\ldots,b_r(x_n))$ is jointly Gaussian over the annotator population. Then the finite-sample version of the first term,
 
 $$
 \frac1n\sum_{i=1}^n b_r(x_i)(\widehat\mu_A(x_i)-\mu_B(x_i)),
@@ -240,13 +239,13 @@ so no certificate is issued. A wrong certificate therefore requires the compleme
 
 #### Experimental setting
 
-We use six radiologists R11–R16^[In VinDr-CXR, radiologists R11–R16 labeled images with few positive findings, whereas R8–R10 labeled images with more positive findings. The test treats the annotators as IID draws from one population labeling the same image distribution, so we choose A, B, and the reference annotators only from R11–R16, whose surrogate predictors are learned from the same case mix.] from the VinDr-CXR dataset. We run the test on every configuration, that is, every choice of a training annotator A and a human B among them, together with $K=2, 3,$ or $4$ of the remaining four as the reference annotators. As in [I.1](#aggregate-score), we work with the aggregate score throughout this part: the model and the surrogate predictors are trained to predict each annotator's aggregate scores, and B's aggregate scores enter the comparison. 
+We use six radiologists R11–R16^[In VinDr-CXR, radiologists R11–R16 labeled images with few positive findings, whereas R8–R10 labeled images with more positive findings. The test treats the annotators as IID draws from one population labeling the same image distribution, so we choose A, B, and the reference annotators only from R11–R16, whose surrogate predictors are learned from the same case mix.] from the VinDr-CXR dataset. We run the test on every configuration, that is, every choice of a training annotator A and a human B among them, together with $K=2, 3,$ or $4$ of the remaining four as the reference annotators. As in [I.1](#aggregate-score), we work with the aggregate score throughout this part: the model and the surrogate predictors are trained to predict each annotator's aggregate scores, and B's aggregate scores enter the comparison. The images labeled by R11–R16 are split into training, validation, and test images. The model and the surrogate predictors are trained on the training images; the gap $\widehat\Delta$ is estimated on B's test images ($D_1$), and the scale $\tau_g$ is calibrated on B's validation images ($D_2$).
 
 By @eq-false-certificate, the sum $\alpha:=\alpha_\Delta+\alpha_g+\gamma$ bounds the probability of a false certificate; we call it the *total error budget*. We split it equally among the three bounds, setting $\alpha_\Delta=\alpha_g=\gamma=\alpha/3,$ and run the test at $\alpha=0.01,$ $0.05,$ $0.10,$ and $0.20.$
 
 #### Result
 
-For each $K$ and $\alpha,$ we call the fraction of configurations in which the test certifies the reference as the *certification rate*. A certification means that the $K$ reference annotators of that configuration form a reliable reference for the model-human comparison between $\widehat \mu_A$ and $Y_B:$ their evaluation reference names the same better performer as the latent target, up to a false-certification probability of at most $\alpha.$ @fig-continuous-task2 shows that it increases with the total error budget and with the number of reference annotators. At $\alpha=0.20,$ the test certifies $10\%$ of the configurations with two reference annotators, $23.3\%$ with three, and $46.7\%$ with four. More reference annotators shrink $B_{\mathcal R},$ through the factor $1/\sqrt K$ and through a calibration of $\tau_g$ with more degrees of freedom, so smaller gaps between the model and B can be certified.
+For each $K$ and $\alpha,$ we call the fraction of configurations in which the test certifies the reference the *certification rate*. A certification means that the $K$ reference annotators of that configuration form a reliable reference for the model-human comparison between $\widehat \mu_A$ and $Y_B:$ their evaluation reference names the same better performer as the latent target, up to a false-certification probability of at most $\alpha.$ @fig-continuous-task2 shows that it increases with the total error budget and with the number of reference annotators. At $\alpha=0.20,$ the test certifies $10\%$ of the configurations with two reference annotators, $23.3\%$ with three, and $46.7\%$ with four. More reference annotators shrink $B_{\mathcal R},$ through the factor $1/\sqrt K$ and through a calibration of $\tau_g$ with more degrees of freedom, so smaller gaps between the model and B can be certified.
 
 ::: {#fig-continuous-task2}
 
@@ -270,7 +269,7 @@ How often the test certifies the reference. Certification rate by number of refe
 
 ::: {.callout-note collapse="true" title="Experimental details"}
 
-The $30$ ordered pairs (A, B) give $330$ configurations per total error budget: $180$ with $2$ reference annotators, $120$ with $3,$ and $30$ with $4.$ Each percentage is the number of certifications divided by the number of configurations in that cell; select a cell in the heatmap to see its count. Pooled over $K,$ the test certifies $2,$ $10,$ $21,$ and $60$ of the $330$ configurations at total error budgets $0.01,$ $0.05,$ $0.10,$ and $0.20.$
+The $5{,}438$ images labeled by at least one of R11–R16 are split into $2{,}887$ training, $738$ validation, and $1{,}813$ test images. The $30$ ordered pairs (A, B) give $330$ configurations per total error budget: $180$ with $2$ reference annotators, $120$ with $3,$ and $30$ with $4.$ Each percentage is the number of certifications divided by the number of configurations in that cell; select a cell in the heatmap to see its count. Pooled over $K,$ the test certifies $2,$ $10,$ $21,$ and $60$ of the $330$ configurations at total error budgets $0.01,$ $0.05,$ $0.10,$ and $0.20.$
 
 :::
 

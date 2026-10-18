@@ -34,7 +34,7 @@ Here and below, annotators are independent and identically distributed (IID) dra
 - **Conditional independence:** $\epsilon_{r,x}\perp\epsilon_{s,x'}$ for $(r,x)\neq(s,x').$ Conditional on the items and the annotator identities, the idiosyncratic noises are independent across annotators and across items. 
 <!-- The latent target is therefore a consensus of annotators rather than a clinical ground truth, and the second assumption does not make any particular annotator, or any small panel, unbiased. -->
 
-We denote the model trained on annotator A's labels as $\widehat\mu_A.$ Here, the training loss is the mean squared error (MSE), which targets A's conditional mean $\mu_A$[@hastie2009elements], so we have
+We denote the model trained on annotator A's labels as $\widehat\mu_A.$ Here, the training loss is the mean squared error (MSE), which targets A's conditional mean $\mu_A$ [@hastie2009elements], so we have
 
 $$
 \widehat\mu_A(x)=\mu_A(x)+\widehat e_A(x),
@@ -63,7 +63,7 @@ A negative gap favors the model and a positive gap favors the human annotator. T
 
 #### The self-reference effect
 
-Now we formally analyze the question: **to what extent does annotation bias affect a model–human comparison?** Since the latent target $\mu^*$ is unobserved, we consider model–human comparisons using either $R=A$ or $R=C$ as the reference, where $C$ is an annotator distinct from both $A$ and $B.$  We refer to the former setting as *self-reference setting* and the corresponding biased effect as *self-reference effect*.
+Now we formally analyze the question: **to what extent does annotation bias affect a model–human comparison?** Since the latent target $\mu^*$ is unobserved, we consider model–human comparisons using either $R=A$ or $R=C$ as the reference, where $C$ is an annotator distinct from both $A$ and $B.$  We refer to the former setting as the *self-reference setting* and the corresponding biased effect as the *self-reference effect*.
 
 As discussed in the [Introduction](#introduction), self-reference may favor the model's performance. We measure this advantage by the change in the MSE gap when C replaces A as the reference:
 
@@ -92,7 +92,7 @@ This step uses only the definition of $\Delta_R,$ so the same formula also holds
 
 #### Theoretical analysis: why self-reference favors the model
 
-We consider annotators A, B, and C to be drawn independently from the population.Averaging $S_{A,C}$ over this randomness gives
+We consider annotators A, B, and C to be drawn independently from the population. Averaging $S_{A,C}$ over this randomness gives
 
 $$
 \mathbb E_{A,B,C}[S_{A,C}]
@@ -162,7 +162,7 @@ $$
 We test $H_0:S_{A,C}\leq0$ against $H_1:S_{A,C}>0$ and reject $H_0$ at level $\alpha$ if
 
 $$
-T_{A,C}=\frac{\widehat S_{A,C}}{\widehat{\mathrm{se}}(\widehat S_{A,C})}>t_{n-1,1-\alpha}.
+T_{A,C}=\frac{\widehat S_{A,C}}{\widehat{\mathrm{se}}(\widehat S_{A,C})}>t_{n-1,1-\alpha},
 $$ {#eq-task1-test}
 
 where $\widehat{\mathrm{se}}(\widehat S_{A,C})$ is the sample standard deviation of the $Z_i$ divided by $\sqrt n.$ Conditional on the trained model, this test has asymptotic level $\alpha$ when the images are drawn IID and $Z_i$ has finite nonzero variance.
@@ -243,7 +243,7 @@ The test detects a positive self-reference effect in both comparisons for the R8
 
 :::
 
-Self-reference test for the aggregate score. One-sided p-values for a positive self-reference effect over $1{,}500$ test images; nominal threshold $0.01.$ In each comparison the external reference is the remaining radiologist.
+Self-reference test for the aggregate score. One-sided p-values for a positive self-reference effect over $1{,}500$ held-out images; nominal level $0.01.$ In each comparison the external reference is the remaining radiologist.
 
 :::
 
@@ -300,7 +300,7 @@ $$
 +2\mathbb E_X\big[\operatorname{Cov}_A\big(\mu_{A,h},\mathbf 1\{\widehat\mu_{A,h}\geq t_h\}-\mathbf 1\{\mu_{A,h}\geq t_h\}\big)\big].
 $$ {#eq-binary-average-self-reference}
 
-The first term does not depend on the fitted model and is nonnegative because the decision $\mathbf{1}\{\mu_{A,h}\ge t_h\}$ is nondecreasing in $\mu_{A,h}$^[It is positive if, for at least one image, $\mu_{r,h}$ lies above $t_h$ for some annotators and below $t_h$ for others]. The covariance term in the second term captures the alignment between an annotator's probability $\mu_{A,h}$ and the model's decision error, which can have either sign. Moreover, its magnitude diminishes as the model fits annotator $A$ more closely. Thus, for annotators drawn randomly from the population, self-reference is expected to make the model appear better than an independent reference would, with the magnitude of this effect determined by how much the annotators' probabilities vary across the threshold $t_h.$
+The first term does not depend on the fitted model and is nonnegative because the decision $\mathbf{1}\{\mu_{A,h}\ge t_h\}$ is nondecreasing in $\mu_{A,h}$^[It is positive if, with positive probability over images, $\mu_{r,h}$ lies above $t_h$ for a positive fraction of annotators and below $t_h$ for another.]. The covariance term in the second term captures the alignment between an annotator's probability $\mu_{A,h}$ and the model's decision error, which can have either sign. Moreover, its magnitude diminishes as the model fits annotator $A$ more closely. Thus, for annotators drawn randomly from the population, self-reference is expected to make the model appear better than an independent reference would, with the magnitude of this effect determined by how much the annotators' probabilities vary across the threshold $t_h.$
 
 ::: {.callout-note collapse="true" title="Deriving the average effect for binary labels"}
 
@@ -371,7 +371,7 @@ Atelectasis: a positive self-reference effect is detected in $1$ of $6$ comparis
 
 :::
 
-Self-reference test for each finding. One-sided p-values over $1{,}500$ test images; unadjusted nominal tests. In each comparison the external reference is the remaining radiologist. "No variation" marks tests in which every paired term $Z_i$ is zero.
+Self-reference test for each finding. One-sided p-values over $1{,}500$ held-out images; unadjusted nominal tests. In each comparison the external reference is the remaining radiologist. "No variation" marks tests in which every paired term $Z_i$ is zero.
 
 :::
 

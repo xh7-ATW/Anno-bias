@@ -429,7 +429,7 @@
       findings.map(function (a) { return { value: String(a.index), label: a.name }; }),
       state.aspect,
       function (v) { state.aspect = v; state.highlight = null; state.selected = null; render(); });
-    var alphaField = segmentedField("Threshold", alphas, state.alpha,
+    var alphaField = segmentedField("Level", alphas, state.alpha,
       function (v) { state.alpha = v; render(); });
 
     var lead = h("p", { class: "ab-lead", "aria-live": "polite" });
@@ -452,7 +452,7 @@
       var alpha = parseFloat(state.alpha);
 
       var detected = rows.filter(function (r) { return r.reject[state.alpha]; }).length;
-      lead.textContent = aspectName() + ": positive self-reference effects are detected in " + detected + " of 6 comparisons at threshold " +
+      lead.textContent = aspectName() + ": a positive self-reference effect is detected in " + detected + " of 6 comparisons at level " +
         alpha.toFixed(2) + ".";
 
       tableHost.innerHTML = "";
